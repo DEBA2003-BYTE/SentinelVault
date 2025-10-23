@@ -1,0 +1,263 @@
+import React, { useState, useEffect } from 'react';
+import { FileText, Upload, Shield, Activity } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { fileService, riskService } from '../services/api';
+import type { FileItem, RiskAssessment } from '../types';
+import RiskIndicator from '../components/common/RiskIndicator';
+
+const Dashboard: React.FC = () => {
+  const { user, token } = useAuth();
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [riskData, setRiskData] = useState<RiskAssessment | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!token) return;
+
+      try {
+        const [filesResponse, riskResponse] = await Promise.all([
+          fileService.getUserFiles(token),
+          riskService.getRiskAssessment(token)
+        ]);
+
+        setFiles(filesResponse.files || []);
+        setRiskData(riskResponse);
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, [token]);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const totalStorage = files.reduce((sum, file) => sum + file.size, 0);
+  const recentFiles = files.slice(0, 5);
+
+  if (loading) {
+    return (
+      <div className="page-container">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <div className="spinner" style={{ width: '40px', height: '40px' }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-container">
+      <div style={{ marginBottom: 'var(--space-8)' }}>
+        <h1>Welcome back, {user?.email}</h1>
+        <p style={{ color: 'var(--color-gray-600)', marginBottom: 0 }}>
+          Here's an overview of your secure cloud storage
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-4" style={{ marginBottom: 'var(--space-8)' }}>
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <div style={{
+              padding: 'var(--space-3)',
+              backgroundColor: 'var(--color-brand-light)',
+              borderRadius: '8px'
+            }}>
+              <FileText size={24} style={{ color: 'var(--color-brand)' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>
+                {files.length}
+              </div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-600)' }}>
+                Total Files
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <div style={{
+              padding: 'var(--space-3)',
+              backgroundColor: '#dbeafe',
+              borderRadius: '8px'
+            }}>
+              <Upload size={24} style={{ color: 'var(--color-info)' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>
+                {formatFileSize(totalStorage)}
+              </div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-600)' }}>
+                Storage Used
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <div style={{
+              padding: 'var(--space-3)',
+              backgroundColor: riskData && riskData.riskScore <= 30 ? '#d1fae5' : '#fee2e2',
+              borderRadius: '8px'
+            }}>
+              <Shield size={24} style={{ 
+                color: riskData && riskData.riskScore <= 30 ? 'var(--color-success)' : 'var(--color-error)' 
+              }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>
+                {riskData?.riskScore || 0}
+              </div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-600)' }}>
+                Risk Score
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+            <div style={{
+              padding: 'var(--space-3)',
+              backgroundColor: '#fef3c7',
+              borderRadius: '8px'
+            }}>
+              <Activity size={24} style={{ color: 'var(--color-warning)' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>
+                {riskData?.recentActivity.length || 0}
+              </div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-600)' }}>
+                Recent Actions
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2" style={{ gap: 'var(--space-8)' }}>
+        {/* Recent Files */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Recent Files</h3>
+          </div>
+          {recentFiles.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+              {recentFiles.map((file) => (
+                <div
+                  key={file.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: 'var(--space-3)',
+                    backgroundColor: 'var(--color-bg-secondary)',
+                    borderRadius: '6px'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 'var(--font-medium)' }}>{file.filename}</div>
+                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-600)' }}>
+                      {formatFileSize(file.size)} • {new Date(file.uploadedAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-500)' }}>
+                    {file.accessCount} downloads
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-gray-500)' }}>
+              No files uploaded yet
+            </div>
+          )}
+        </div>
+
+        {/* Security Status */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="card-title">Security Status</h3>
+          </div>
+          {riskData ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+              <div style={{ textAlign: 'center' }}>
+                <RiskIndicator score={riskData.riskScore} size="lg" />
+              </div>
+              
+              <div>
+                <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-2)' }}>
+                  Risk Factors
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
+                    <span>IP Address:</span>
+                    <span style={{ color: 'var(--color-gray-600)' }}>{riskData.factors.ipAddress}</span>
+                  </div>
+                  {riskData.factors.location && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
+                      <span>Location:</span>
+                      <span style={{ color: 'var(--color-gray-600)' }}>{riskData.factors.location}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
+                    <span>Recent Failures:</span>
+                    <span style={{ color: 'var(--color-gray-600)' }}>{riskData.factors.recentFailures}</span>
+                  </div>
+                </div>
+              </div>
+
+              {riskData.recentActivity.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-2)' }}>
+                    Recent Activity
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+                    {riskData.recentActivity.slice(0, 3).map((activity, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontSize: 'var(--text-sm)'
+                        }}
+                      >
+                        <span>{activity.action}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                          <RiskIndicator score={activity.riskScore} showLabel={false} size="sm" />
+                          <span style={{ color: activity.allowed ? 'var(--color-success)' : 'var(--color-error)' }}>
+                            {activity.allowed ? '✓' : '✗'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--color-gray-500)' }}>
+              Loading security status...
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
