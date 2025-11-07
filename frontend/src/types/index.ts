@@ -5,6 +5,10 @@ export interface User {
   isBlocked?: boolean;
   createdAt?: string;
   lastLogin?: string;
+  zkpVerified?: boolean;
+  deviceFingerprint?: string;
+  registeredLocation?: string;
+  did?: string;
 }
 
 export interface AuthResponse {
@@ -12,6 +16,15 @@ export interface AuthResponse {
   token: string;
   user: User;
   riskScore?: number;
+  zkpVerified?: boolean;
+  opaDecision?: 'allow' | 'deny';
+  deviceInfo?: {
+    fingerprint: string;
+    location?: string;
+    isRecognized: boolean;
+    riskScore: number;
+    riskFactors?: string[];
+  };
 }
 
 export interface FileItem {
@@ -69,6 +82,7 @@ export interface SystemStats {
     total: number;
     blocked: number;
     active: number;
+    zkpVerified: number;
   };
   files: {
     total: number;
@@ -78,5 +92,82 @@ export interface SystemStats {
     recentLogins: number;
     recentUploads: number;
     highRiskAttempts: number;
+  };
+  security: {
+    opaDenials: number;
+    zkpVerifications: number;
+    zkpVerificationRate: string;
+  };
+}
+
+// ZKP Types
+export interface ZKPProof {
+  proof: string;
+  publicSignals: string[];
+}
+
+export interface ZKPStatus {
+  verified: boolean;
+  hasProof: boolean;
+  verifiedAt?: string;
+  publicSignals?: string[];
+}
+
+export interface ZKPResponse {
+  message: string;
+  verified: boolean;
+  timestamp: string;
+  riskScore?: number;
+}
+
+// OPA Types
+export interface OPADecision {
+  decision: 'allow' | 'deny';
+  allow: boolean;
+  reason?: string;
+  riskScore: number;
+  factors?: string[];
+  timestamp: string;
+}
+
+export interface PolicyRule {
+  id: string;
+  name: string;
+  description: string;
+  policyCode: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+// Enhanced types
+export interface RejectionReason {
+  details: string;
+  policy?: {
+    description: string;
+  };
+  riskScore: number;
+  factors?: {
+    location?: string;
+    registeredLocation?: string;
+    fingerprintMatch?: boolean;
+    deviceFingerprint?: string;
+  };
+}
+
+export interface DeviceContext {
+  fingerprint: string;
+  location?: string;
+  userAgent: string;
+  ipAddress?: string;
+  timestamp: string;
+  clientInfo?: {
+    screenResolution: string;
+    colorDepth: number;
+    pixelRatio: number;
+    timezone: string;
+    platform: string;
+    language: string;
+    cookieEnabled: boolean;
+    doNotTrack: string | null;
   };
 }

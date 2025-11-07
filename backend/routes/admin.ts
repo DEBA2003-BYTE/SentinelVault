@@ -3,6 +3,9 @@ import { authenticateToken, requireAdmin,type AuthRequest } from '../middleware/
 import { User } from '../models/User';
 import { File } from '../models/File';
 import { AccessLog } from '../models/AccessLog';
+import { AdminNotification } from '../models/AdminNotification';
+import { FailedLoginAttempt } from '../models/FailedLoginAttempt';
+import { rateLimiterService } from '../utils/rateLimiter';
 
 const router = express.Router();
 
@@ -40,7 +43,12 @@ router.get('/users', authenticateToken, requireAdmin, async (req: AuthRequest, r
           createdAt: user.createdAt,
           lastLogin: user.lastLogin,
           fileCount,
-          recentLogins
+          recentLogins,
+          zkpVerified: user.zkProofData?.verified || false,
+          deviceFingerprint: user.deviceFingerprint,
+          registeredLocation: user.registeredLocation,
+          lastKnownLocation: user.lastKnownLocation,
+          rejectionReasons: user.rejectionReasons || []
         };
       })
     );
@@ -66,18 +74,37 @@ router.post('/users/:id/block', authenticateToken, requireAdmin, async (req: Aut
     const userId = req.params.id;
     const { blocked } = req.body;
 
+    console.log('Block/unblock user request:', { userId, blocked, adminId: req.user?.id });
+
     const user = await User.findById(userId);
     if (!user) {
+      console.log('User not found:', userId);
       return res.status(404).json({ error: 'User not found' });
     }
 
+    console.log('Found user:', { email: user.email, isAdmin: user.isAdmin, currentlyBlocked: user.isBlocked });
+
     // Prevent blocking admin users
     if (user.isAdmin && blocked) {
+      console.log('Attempted to block admin user:', user.email);
       return res.status(400).json({ error: 'Cannot block admin users' });
     }
 
     user.isBlocked = blocked;
     await user.save();
+
+    console.log('User status updated:', { email: user.email, isBlocked: user.isBlocked });
+
+    // Log the action
+    await new AccessLog({
+      userId: req.user!.id, // Admin who performed the action
+      action: blocked ? 'admin_block_user' : 'admin_unblock_user',
+      riskScore: 0,
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.headers['user-agent'],
+      allowed: true,
+      reason: `${blocked ? 'Blocked' : 'Unblocked'} user: ${user.email}`
+    }).save();
 
     res.json({
       message: `User ${blocked ? 'blocked' : 'unblocked'} successfully`,
@@ -89,7 +116,74 @@ router.post('/users/:id/block', authenticateToken, requireAdmin, async (req: Aut
     });
   } catch (error) {
     console.error('Block user error:', error);
-    res.status(500).json({ error: 'Failed to update user status' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ 
+      error: 'Failed to update user status',
+      details: errorMessage 
+    });
+  }
+});
+
+// Delete user
+router.delete('/users/:id', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.params.id;
+    console.log('Delete user request:', { userId, adminId: req.user?.id });
+
+    const user = await User.findById(userId);
+    if (!user) {
+      console.log('User not found:', userId);
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    console.log('Found user to delete:', { email: user.email, isAdmin: user.isAdmin });
+
+    // Prevent deleting admin users
+    if (user.isAdmin) {
+      console.log('Attempted to delete admin user:', user.email);
+      return res.status(400).json({ error: 'Cannot delete admin users' });
+    }
+
+    // Delete user's files
+    console.log('Deleting user files...');
+    const deletedFiles = await File.deleteMany({ userId: user._id });
+    console.log('Deleted files:', deletedFiles.deletedCount);
+
+    // Delete user's access logs (optional - you might want to keep these for audit)
+    // await AccessLog.deleteMany({ userId: user._id });
+
+    // Delete the user
+    console.log('Deleting user...');
+    await User.findByIdAndDelete(userId);
+    console.log('User deleted successfully');
+
+    // Log the deletion
+    console.log('Creating audit log...');
+    await new AccessLog({
+      userId: req.user!.id, // Admin who performed the deletion
+      action: 'admin_delete_user',
+      riskScore: 0,
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.headers['user-agent'],
+      allowed: true,
+      reason: `Deleted user: ${user.email}`
+    }).save();
+
+    console.log('Delete operation completed successfully');
+    res.json({
+      message: 'User deleted successfully',
+      deletedUser: {
+        id: user._id,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.status(500).json({ 
+      error: 'Failed to delete user',
+      details: errorMessage 
+    });
   }
 });
 
@@ -117,18 +211,27 @@ router.get('/audit', authenticateToken, requireAdmin, async (req: AuthRequest, r
     const total = await AccessLog.countDocuments(filter);
 
     res.json({
-      logs: logs.map(log => ({
-        id: log._id,
-        user: log.userId ? (log.userId as any).email : 'Unknown',
-        file: log.fileId ? (log.fileId as any).originalName : null,
-        action: log.action,
-        riskScore: log.riskScore,
-        ipAddress: log.ipAddress,
-        location: log.location,
-        timestamp: log.timestamp,
-        allowed: log.allowed,
-        reason: log.reason
-      })),
+      logs: logs.map(log => {
+        const populatedUser = log.userId as any;
+        const populatedFile = log.fileId as any;
+        
+        return {
+          id: log._id,
+          userId: populatedUser ? { email: populatedUser.email } : null,
+          user: populatedUser ? populatedUser.email : 'Unknown',
+          file: populatedFile ? populatedFile.originalName : null,
+          action: log.action,
+          riskScore: log.riskScore,
+          ipAddress: log.ipAddress,
+          deviceFingerprint: log.deviceFingerprint,
+          location: log.location,
+          timestamp: log.timestamp,
+          allowed: log.allowed,
+          reason: log.reason,
+          opaDecision: log.opaDecision,
+          zkpVerified: log.zkpVerified
+        };
+      }),
       pagination: {
         page,
         limit,
@@ -153,14 +256,18 @@ router.get('/stats', authenticateToken, requireAdmin, async (req: AuthRequest, r
       totalUsers,
       totalFiles,
       blockedUsers,
+      zkpVerifiedUsers,
       recentLogins,
       recentUploads,
       highRiskAttempts,
+      opaDenials,
+      zkpVerifications,
       totalStorage
     ] = await Promise.all([
       User.countDocuments(),
       File.countDocuments(),
       User.countDocuments({ isBlocked: true }),
+      User.countDocuments({ 'zkProofData.verified': true }),
       AccessLog.countDocuments({
         action: 'login',
         allowed: true,
@@ -175,6 +282,15 @@ router.get('/stats', authenticateToken, requireAdmin, async (req: AuthRequest, r
         riskScore: { $gte: 70 },
         timestamp: { $gte: sevenDaysAgo }
       }),
+      AccessLog.countDocuments({
+        opaDecision: 'deny',
+        timestamp: { $gte: sevenDaysAgo }
+      }),
+      AccessLog.countDocuments({
+        action: 'verifyZKP',
+        allowed: true,
+        timestamp: { $gte: sevenDaysAgo }
+      }),
       File.aggregate([
         { $group: { _id: null, totalSize: { $sum: '$size' } } }
       ])
@@ -184,7 +300,8 @@ router.get('/stats', authenticateToken, requireAdmin, async (req: AuthRequest, r
       users: {
         total: totalUsers,
         blocked: blockedUsers,
-        active: totalUsers - blockedUsers
+        active: totalUsers - blockedUsers,
+        zkpVerified: zkpVerifiedUsers
       },
       files: {
         total: totalFiles,
@@ -194,11 +311,285 @@ router.get('/stats', authenticateToken, requireAdmin, async (req: AuthRequest, r
         recentLogins: recentLogins,
         recentUploads: recentUploads,
         highRiskAttempts: highRiskAttempts
+      },
+      security: {
+        opaDenials: opaDenials,
+        zkpVerifications: zkpVerifications,
+        zkpVerificationRate: totalUsers > 0 ? (zkpVerifiedUsers / totalUsers * 100).toFixed(1) : '0'
       }
     });
   } catch (error) {
     console.error('Get stats error:', error);
     res.status(500).json({ error: 'Failed to get statistics' });
+  }
+});
+
+// Get admin notifications
+router.get('/notifications', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
+
+    const notifications = await AdminNotification.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await AdminNotification.countDocuments();
+    const unreadCount = await AdminNotification.countDocuments({ isRead: false });
+
+    res.json({
+      notifications,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      },
+      unreadCount
+    });
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({ error: 'Failed to get notifications' });
+  }
+});
+
+// Mark notification as read
+router.patch('/notifications/:id/read', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const notification = await AdminNotification.findByIdAndUpdate(
+      req.params.id,
+      { isRead: true, readAt: new Date() },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
+    res.json({ message: 'Notification marked as read', notification });
+  } catch (error) {
+    console.error('Mark notification read error:', error);
+    res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+});
+
+// Get failed login attempts for a user
+router.get('/users/:userId/failed-attempts', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const failedAttempts = await rateLimiterService.getRecentFailedAttempts(user.email, 50);
+    const currentCount = await rateLimiterService.getFailedAttemptsCount(user.email);
+    const rateLimitStatus = await rateLimiterService.isAccountRateLimited(user.email);
+
+    res.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        isBlocked: user.isBlocked
+      },
+      failedAttempts,
+      currentCount,
+      rateLimitStatus
+    });
+  } catch (error) {
+    console.error('Get failed attempts error:', error);
+    res.status(500).json({ error: 'Failed to get failed attempts' });
+  }
+});
+
+// Unblock user account
+router.post('/users/:userId/unblock', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params;
+    const { reason } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Unblock the user
+    user.isBlocked = false;
+    user.rejectionReasons = user.rejectionReasons || [];
+    user.rejectionReasons.push(`Account unblocked by admin: ${reason || 'No reason provided'}`);
+    await user.save();
+
+    // Clear failed attempts
+    await rateLimiterService.clearFailedAttempts(user.email);
+
+    // Log the unblock action
+    await new AccessLog({
+      userId: user._id,
+      action: 'account_unblocked',
+      riskScore: 0,
+      ipAddress: req.ip || 'admin',
+      allowed: true,
+      reason: `Account unblocked by admin: ${reason || 'No reason provided'}`,
+      timestamp: new Date()
+    }).save();
+
+    // Create notification for the unblock action
+    await new AdminNotification({
+      type: 'system_alert',
+      title: `Account Unblocked: ${user.email}`,
+      message: `Account has been unblocked by admin. Reason: ${reason || 'No reason provided'}`,
+      severity: 'medium',
+      userId: user._id,
+      userEmail: user.email,
+      metadata: {
+        blockReason: reason || 'Admin unblock'
+      },
+      isRead: false,
+      createdAt: new Date()
+    }).save();
+
+    res.json({
+      message: 'User account unblocked successfully',
+      user: {
+        id: user._id,
+        email: user.email,
+        isBlocked: user.isBlocked
+      }
+    });
+  } catch (error) {
+    console.error('Unblock user error:', error);
+    res.status(500).json({ error: 'Failed to unblock user' });
+  }
+});
+
+// Get rate limiting statistics
+router.get('/rate-limit-stats', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get blocked accounts count
+    const blockedAccountsCount = await User.countDocuments({ isBlocked: true });
+
+    // Get failed attempts in last 24 hours
+    const failedAttemptsLast24h = await FailedLoginAttempt.countDocuments({
+      timestamp: { $gte: last24Hours }
+    });
+
+    // Get failed attempts in last 7 days
+    const failedAttemptsLast7d = await FailedLoginAttempt.countDocuments({
+      timestamp: { $gte: last7Days }
+    });
+
+    // Get top failing IPs
+    const topFailingIPs = await FailedLoginAttempt.aggregate([
+      { $match: { timestamp: { $gte: last24Hours } } },
+      { $group: { _id: '$ipAddress', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 }
+    ]);
+
+    // Get recent notifications
+    const recentNotifications = await AdminNotification.find({ type: 'account_blocked' })
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    res.json({
+      blockedAccountsCount,
+      failedAttemptsLast24h,
+      failedAttemptsLast7d,
+      topFailingIPs,
+      recentNotifications,
+      rateLimitConfig: {
+        maxAttempts: 5,
+        windowMinutes: 60,
+        lockoutHours: 24
+      }
+    });
+  } catch (error) {
+    console.error('Get rate limit stats error:', error);
+    res.status(500).json({ error: 'Failed to get rate limit statistics' });
+  }
+});
+
+// Get flagged authentication attempts
+router.get('/flagged-attempts', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { filter = 'all', timeRange = '24h' } = req.query;
+    
+    // Calculate time range
+    let timeFilter = new Date();
+    switch (timeRange) {
+      case '1h':
+        timeFilter.setHours(timeFilter.getHours() - 1);
+        break;
+      case '24h':
+        timeFilter.setHours(timeFilter.getHours() - 24);
+        break;
+      case '7d':
+        timeFilter.setDate(timeFilter.getDate() - 7);
+        break;
+      case '30d':
+        timeFilter.setDate(timeFilter.getDate() - 30);
+        break;
+    }
+
+    // Build query
+    let query: any = {
+      timestamp: { $gte: timeFilter }
+    };
+
+    // Apply filters
+    if (filter === 'blocked') {
+      query.allowed = false;
+    } else if (filter === 'high_risk') {
+      query.riskScore = { $gte: 70 };
+    }
+
+    // Get flagged attempts
+    const attempts = await AccessLog.find(query)
+      .populate('userId', 'email')
+      .sort({ timestamp: -1 })
+      .limit(100);
+
+    // Format response
+    const formattedAttempts = attempts.map(attempt => {
+      const riskLevel = attempt.riskScore >= 90 ? 'critical' :
+                       attempt.riskScore >= 70 ? 'high' :
+                       attempt.riskScore >= 30 ? 'medium' : 'low';
+
+      const populatedUser = attempt.userId as any;
+
+      return {
+        id: attempt._id,
+        userId: populatedUser ? populatedUser._id : null,
+        userEmail: populatedUser ? populatedUser.email : 'Unknown',
+        action: attempt.action,
+        riskScore: attempt.riskScore,
+        riskLevel,
+        allowed: attempt.allowed,
+        reason: attempt.reason || 'No reason provided',
+        ipAddress: attempt.ipAddress,
+        location: attempt.location,
+        deviceFingerprint: attempt.deviceFingerprint,
+        timestamp: attempt.timestamp,
+        policyViolations: [] // Would be populated from policy results if stored
+      };
+    });
+
+    res.json({
+      attempts: formattedAttempts,
+      total: formattedAttempts.length,
+      timeRange,
+      filter
+    });
+
+  } catch (error) {
+    console.error('Failed to fetch flagged attempts:', error);
+    res.status(500).json({ error: 'Failed to fetch flagged attempts' });
   }
 });
 

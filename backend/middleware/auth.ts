@@ -8,6 +8,9 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
     isAdmin: boolean;
+    zkpVerified?: boolean;
+    deviceFingerprint?: string;
+    registeredLocation?: string;
   };
 }
 
@@ -30,7 +33,10 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     req.user = {
       id: (user._id as mongoose.Types.ObjectId).toString(),
       email: user.email,
-      isAdmin: user.isAdmin
+      isAdmin: user.isAdmin,
+      zkpVerified: user.zkProofData?.verified || false,
+      deviceFingerprint: user.deviceFingerprint,
+      registeredLocation: user.registeredLocation
     };
 
     next();

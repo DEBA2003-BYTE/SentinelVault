@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback Submission Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .result { 
+            margin-top: 10px; 
+            padding: 10px; 
+            border-radius: 4px; 
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .info { 
+            background: #d1ecf1; 
+            color: #0c5460; 
+            border: 1px solid #bee5eb; 
+        }
+        .rating-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .star {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: #d1d5db;
+            cursor: pointer;
+            padding: 0;
+        }
+        .star:hover,
+        .star.active {
+            color: #fbbf24;
+        }
+        .rating-text {
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💬 Feedback Submission Test</h1>
+        <p>Test the feedback submission functionality to ensure it works without authentication.</p>
+    </div>
+
+    <div class="container">
+        <h3>Submit Feedback</h3>
+        <form id="feedbackForm">
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="email" class="form-input" placeholder="your.email@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Rating</label>
+                <div class="rating-input">
+                    <button type="button" class="star" data-rating="1">★</button>
+                    <button type="button" class="star" data-rating="2">★</button>
+                    <button type="button" class="star" data-rating="3">★</button>
+                    <button type="button" class="star" data-rating="4">★</button>
+                    <button type="button" class="star active" data-rating="5">★</button>
+                    <span class="rating-text" id="ratingText">(5/5)</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Your Feedback</label>
+                <textarea id="complaint" class="form-textarea" placeholder="Please share your thoughts, suggestions, or report any issues..." required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Submit Feedback</button>
+        </form>
+        
+        <div id="result"></div>
+    </div>
+
+    <div class="container">
+        <h3>🧪 Quick Tests</h3>
+        <button class="btn btn-success" onclick="testValidFeedback()">Test Valid Feedback</button>
+        <button class="btn btn-success" onclick="testShortFeedback()">Test Short Feedback (Should Fail)</button>
+        <button class="btn btn-success" onclick="testInvalidEmail()">Test Invalid Email (Should Fail)</button>
+        
+        <div id="testResult"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001';
+        let currentRating = 5;
+
+        // Rating stars functionality
+        const stars = document.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.addEventListener('click', function() {
+                currentRating = parseInt(this.dataset.rating);
+                updateStars();
+            });
+        });
+
+        function updateStars() {
+            stars.forEach((star, index) => {
+                if (index < currentRating) {
+                    star.classList.add('active');
+                } else {
+                    star.classList.remove('active');
+                }
+            });
+            document.getElementById('ratingText').textContent = `(${currentRating}/5)`;
+        }
+
+        // Form submission
+        document.getElementById('feedbackForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const complaint = document.getElementById('complaint').value;
+            
+            await submitFeedback(email, complaint, currentRating);
+        });
+
+        async function submitFeedback(email, complaint, rating) {
+            showResult('result', 'Submitting feedback...', 'info');
+            
+            try {
+                const response = await fetch(`${API_URL}/api/feedback/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        complaint,
+                        rating
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('result', `✅ Feedback submitted successfully! ID: ${data.id}`, 'success');
+                    document.getElementById('feedbackForm').reset();
+                    currentRating = 5;
+                    updateStars();
+                } else {
+                    showResult('result', `❌ Failed to submit feedback: ${data.error}`, 'error');
+                    if (data.details) {
+                        console.error('Validation errors:', data.details);
+                    }
+                }
+            } catch (error) {
+                showResult('result', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testValidFeedback() {
+            showResult('testResult', 'Testing valid feedback...', 'info');
+            
+            const testEmail = `test${Date.now()}@example.com`;
+            const testComplaint = 'This is a test feedback message with sufficient length to pass validation.';
+            const testRating = 4;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/feedback/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        complaint: testComplaint,
+                        rating: testRating
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('testResult', `✅ Valid feedback test passed! ID: ${data.id}`, 'success');
+                } else {
+                    showResult('testResult', `❌ Valid feedback test failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('testResult', `❌ Test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testShortFeedback() {
+            showResult('testResult', 'Testing short feedback (should fail)...', 'info');
+            
+            const testEmail = 'test@example.com';
+            const testComplaint = 'Too short'; // Less than 10 characters
+            const testRating = 3;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/feedback/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        complaint: testComplaint,
+                        rating: testRating
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResult('testResult', `✅ Short feedback test passed (correctly rejected): ${data.error}`, 'success');
+                } else {
+                    showResult('testResult', `❌ Short feedback test failed (should have been rejected)`, 'error');
+                }
+            } catch (error) {
+                showResult('testResult', `❌ Test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testInvalidEmail() {
+            showResult('testResult', 'Testing invalid email (should fail)...', 'info');
+            
+            const testEmail = 'invalid-email'; // Invalid email format
+            const testComplaint = 'This is a test feedback message with sufficient length.';
+            const testRating = 5;
+            
+            try {
+                const response = await fetch(`${API_URL}/api/feedback/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        complaint: testComplaint,
+                        rating: testRating
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    showResult('testResult', `✅ Invalid email test passed (correctly rejected): ${data.error}`, 'success');
+                } else {
+                    showResult('testResult', `❌ Invalid email test failed (should have been rejected)`, 'error');
+                }
+            } catch (error) {
+                showResult('testResult', `❌ Test error: ${error.message}`, 'error');
+            }
+        }
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        // Initialize stars
+        updateStars();
+
+        console.log('Feedback Submission Test loaded');
+        console.log('Available functions: testValidFeedback(), testShortFeedback(), testInvalidEmail()');
+    </script>
+</body>
+</html>

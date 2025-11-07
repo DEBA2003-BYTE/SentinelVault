@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFA Endpoints Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>MFA Endpoints Test</h1>
+    
+    <div class="test-section">
+        <h3>Step 1: Login First</h3>
+        <input type="email" id="email" placeholder="Email" value="test@example.com">
+        <input type="password" id="password" placeholder="Password" value="password123">
+        <button onclick="login()">Login</button>
+        <div id="loginResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 2: Get Available Factor Types</h3>
+        <button onclick="getFactorTypes()">Get Factor Types</button>
+        <div id="factorTypesResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 3: Get Current MFA Factors</h3>
+        <button onclick="getMFAFactors()">Get MFA Factors</button>
+        <div id="mfaFactorsResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 4: Register Fingerprint</h3>
+        <button onclick="registerFingerprint()">Register Fingerprint</button>
+        <div id="fingerprintResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Step 5: Register Face Recognition</h3>
+        <button onclick="registerFaceRecognition()">Register Face Recognition</button>
+        <div id="faceResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let authToken = '';
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email, 
+                        password,
+                        deviceFingerprint: 'test-device-' + Date.now(),
+                        location: 'Test Location'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    authToken = result.token;
+                    document.getElementById('loginResult').innerHTML = 
+                        `<div class="success">✅ Login successful! Token: ${authToken.substring(0, 20)}...</div>`;
+                } else {
+                    document.getElementById('loginResult').innerHTML = 
+                        `<div class="error">❌ Login failed: ${result.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('loginResult').innerHTML = 
+                    `<div class="error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        async function getFactorTypes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/zk-mfa/factor-types`);
+                const result = await response.json();
+                
+                document.getElementById('factorTypesResult').innerHTML = 
+                    `<div class="${response.ok ? 'success' : 'error'}">
+                        <strong>Factor Types:</strong><br>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>`;
+            } catch (error) {
+                document.getElementById('factorTypesResult').innerHTML = 
+                    `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function getMFAFactors() {
+            if (!authToken) {
+                document.getElementById('mfaFactorsResult').innerHTML = 
+                    '<div class="error">❌ Please login first</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/zk-mfa/factors`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('mfaFactorsResult').innerHTML = 
+                    `<div class="${response.ok ? 'success' : 'error'}">
+                        <strong>MFA Factors:</strong><br>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>`;
+            } catch (error) {
+                document.getElementById('mfaFactorsResult').innerHTML = 
+                    `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function registerFingerprint() {
+            if (!authToken) {
+                document.getElementById('fingerprintResult').innerHTML = 
+                    '<div class="error">❌ Please login first</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/zk-mfa/register-secret`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        secretType: 'fingerprint_hash',
+                        secretValue: 'fp_' + Math.random().toString(36).substring(2, 15),
+                        metadata: { strength: 'strong' }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('fingerprintResult').innerHTML = 
+                    `<div class="${response.ok ? 'success' : 'error'}">
+                        <strong>${response.ok ? '✅ Success!' : '❌ Failed'}</strong><br>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>`;
+            } catch (error) {
+                document.getElementById('fingerprintResult').innerHTML = 
+                    `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function registerFaceRecognition() {
+            if (!authToken) {
+                document.getElementById('faceResult').innerHTML = 
+                    '<div class="error">❌ Please login first</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/zk-mfa/register-secret`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        secretType: 'face_recognition_hash',
+                        secretValue: 'face_' + Math.random().toString(36).substring(2, 15),
+                        metadata: { strength: 'strong' }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('faceResult').innerHTML = 
+                    `<div class="${response.ok ? 'success' : 'error'}">
+                        <strong>${response.ok ? '✅ Success!' : '❌ Failed'}</strong><br>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    </div>`;
+            } catch (error) {
+                document.getElementById('faceResult').innerHTML = 
+                    `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,8 +1,11 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { API_BASE_URL } from '../config/api';
 
 class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  status: number;
+  
+  constructor(status: number, message: string) {
     super(message);
+    this.status = status;
     this.name = 'ApiError';
   }
 }
@@ -10,26 +13,63 @@ class ApiError extends Error {
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Network error' }));
-    throw new ApiError(response.status, error.error || 'Request failed');
+    console.error('API Error:', {
+      status: response.status,
+      statusText: response.statusText,
+      error: error
+    });
+    throw new ApiError(response.status, error.error || error.message || 'Request failed');
   }
   return response.json();
 };
 
 export const authService = {
-  async login(email: string, password: string) {
+  async login(email: string, password: string, context?: any) {
+    const payload = { 
+      email, 
+      password,
+      deviceFingerprint: context?.deviceFingerprint,
+      location: context?.location
+    };
+    console.log('Login payload:', payload);
+    
     const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify(payload)
     });
     return handleResponse(response);
   },
 
-  async register(email: string, password: string) {
+  async loginAdmin(email: string, password: string) {
+    // Admin login without device fingerprint or location
+    const payload = { 
+      email, 
+      password
+    };
+    console.log('Admin login payload:', payload);
+    
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return handleResponse(response);
+  },
+
+  async register(email: string, password: string, context?: any) {
+    const payload = { 
+      email, 
+      password,
+      deviceFingerprint: context?.deviceFingerprint,
+      location: context?.location
+    };
+    console.log('Register payload:', payload);
+    
     const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify(payload)
     });
     return handleResponse(response);
   },
@@ -159,6 +199,112 @@ export const adminService = {
 
   async getSystemStats(token: string) {
     const response = await fetch(`${API_BASE_URL}/api/admin/stats`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return handleResponse(response);
+  }
+};
+
+export const zkpService = {
+  async generateProof(inputs: { secret: string; publicValue: string }, token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/zkp/generate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(inputs)
+    });
+    return handleResponse(response);
+  },
+
+  async verifyProof(proof: { proof: string; publicSignals: string[] }, token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/zkp/verify`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(proof)
+    });
+    return handleResponse(response);
+  },
+
+  async getStatus(token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/zkp/status`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return handleResponse(response);
+  },
+
+  async generateIdentityProof(token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/zkp/identity`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return handleResponse(response);
+  },
+
+  async verifyIdentityProof(proof: { proof: string; publicSignals: string[] }, token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/zkp/identity/verify`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(proof)
+    });
+    return handleResponse(response);
+  }
+};
+
+export const policyService = {
+  async evaluate(context: any, token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/policy/evaluate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(context)
+    });
+    return handleResponse(response);
+  },
+
+  async getRules(token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/policy/rules`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return handleResponse(response);
+  },
+
+  async createRule(rule: { name: string; description: string; policyCode: string }, token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/policy/rules`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(rule)
+    });
+    return handleResponse(response);
+  },
+
+  async updateRule(id: string, rule: { name: string; description: string; policyCode: string }, token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/policy/rules/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(rule)
+    });
+    return handleResponse(response);
+  },
+
+  async deleteRule(id: string, token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/policy/rules/${id}`, {
+      method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
     return handleResponse(response);

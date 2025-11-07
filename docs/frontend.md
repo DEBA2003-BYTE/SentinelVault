@@ -1,50 +1,122 @@
-# Frontend Plan - Risk-Adaptive Cloud Storage
 
-## Tech Stack
-- **Framework**: React 19 + TypeScript
-- **Build Tool**: Vite
-- **Runtime**: Bun
-- **Styling**: CSS Modules (simple approach)
-- **State Management**: React Context + useState
-- **HTTP Client**: Fetch API
-- **Routing**: React Router
+# 🚀 Frontend Plan – Risk-Adaptive Cloud Storage (Enhanced with OPA + ZKP + Rejection Reason System)
 
-## Core Components
+---
 
-### Authentication Components
-- `LoginForm` - Email/password login with risk score display
-- `RegisterForm` - User registration with validation
-- `AuthGuard` - Protected route wrapper
-- `LogoutButton` - Secure logout with token cleanup
+## 🎯 Objectives
 
-### File Management Components
-- `FileUpload` - Drag & drop upload with progress bar
-- `FileList` - Grid/list view of user files with metadata
-- `FileCard` - Individual file display with actions
-- `UploadProgress` - Real-time upload progress indicator
-- `FileTypeIcon` - Visual file type indicators
+### 1. **Dynamic Risk-Adaptive Access Control (RAdAC)**
 
-### Dashboard Components
-- `UserDashboard` - Main user interface with file overview
-- `RiskMeter` - Visual risk score indicator (0-100)
-- `QuickStats` - File count, storage used, recent activity
-- `RecentActivity` - Latest user actions with timestamps
+Integrate **Open Policy Agent (OPA)** for **policy-as-code** enforcement, dynamically evaluating contextual risk (device, location, user behavior) before granting access.
 
-### Risk & Security Components
-- `RiskIndicator` - Color-coded risk level badge
-- `SecurityAlert` - High-risk warnings and notifications
-- `AccessDenied` - Risk-based access denial messages
-- `PolicyTooltip` - Explanation of risk policies
+### 2. **Privacy-Preserving Identity Verification**
 
-### Admin Components (Admin Users Only)
-- `AdminDashboard` - System overview with statistics
-- `UserManagement` - User list with block/unblock actions
-- `UserCard` - Individual user info with admin controls
-- `AuditLogViewer` - Searchable audit trail
-- `SystemStats` - Charts and metrics dashboard
-- `AdminNavigation` - Admin-specific navigation menu
+Use **Zero-Knowledge Proofs (ZKP)** + **Self-Sovereign Identity (SSI)** to verify user identity securely without revealing sensitive data.
 
-## Page Structure
+### 3. **Advanced Device Authentication**
+
+Implement comprehensive device fingerprinting with automatic device characteristic detection, location-based authentication, and real-time device recognition status with visual feedback and security recommendations.
+
+### 4. **User Transparency**
+
+When an action is denied, the user **can view a detailed, friendly explanation** (e.g., “location mismatch” or “fingerprint mismatch”) through a **RejectionReasonModal**.
+
+---
+
+## 🧰 Tech Stack
+
+| Layer            | Technology                       |
+| ---------------- | -------------------------------- |
+| Framework        | React 19 + TypeScript            |
+| Build Tool       | Vite                             |
+| Runtime          | Bun                              |
+| Styling          | CSS Modules                      |
+| State Management | React Context + useState         |
+| HTTP Client      | Fetch API                        |
+| Routing          | React Router                     |
+| ZKP Integration  | SnarkJS / Circom                 |
+| Policy Engine    | Open Policy Agent (OPA) REST API |
+| SSI              | DID-based identity               |
+| Visualization    | Recharts or simple CSS gauges    |
+
+---
+
+## 🧩 Core Components
+
+### 🔐 Authentication Components
+
+| Component                      | Purpose                                                                      |
+| ------------------------------ | ---------------------------------------------------------------------------- |
+| **LoginForm**                  | Email/password + automatic ZKP proof submission, shows risk & policy decision |
+| **RegisterForm**               | Register with fingerprint & ZKP proof                                        |
+| **AuthGuard**                  | Protects routes with OPA policy checks                                       |
+| **LogoutButton**               | Revokes auth token and proof                                                 |
+| **ZKPVerifier (new)**          | Generates & submits ZKPs via Circom/SnarkJS                                  |
+| **DeviceAuthStatus (new)**     | Shows device recognition status and risk factors                              |
+| **IdentityBadge (new)**        | Displays verified DID/SSI identity                                           |
+| **RejectionReasonModal (new)** | Shows reason when OPA denies access                                          |
+| **ZKMFASetup (new)**           | Multi-factor authentication setup with biometric capture                     |
+| **BiometricCapture (new)**     | Face recognition and fingerprint capture interface                           |
+| **QuickZKPVerify (new)**       | One-click ZKP verification from dashboard                                     |
+
+---
+
+### 📂 File Management Components
+
+| Component                    | Purpose                                         |
+| ---------------------------- | ----------------------------------------------- |
+| **FileUpload**               | Upload with OPA pre-check + progress bar        |
+| **FileList**                 | Displays files with OPA-enforced visibility     |
+| **FileCard**                 | Displays metadata, risk score, and proof status |
+| **UploadProgress**           | Real-time visual feedback                       |
+| **FileTypeIcon**             | Shows file type symbol                          |
+| **PolicyDecisionTag (new)**  | Displays OPA “allow” / “deny” per action        |
+| **ZKPProtectedAction (new)** | Requires proof before high-risk actions         |
+
+---
+
+### 📊 Dashboard Components
+
+| Component                   | Purpose                                       |
+| --------------------------- | --------------------------------------------- |
+| **UserDashboard**           | Overview of files, risk score, and ZKP status |
+| **RiskMeter**               | Animated gauge (0–100)                        |
+| **QuickStats**              | File count, proof count, recent activity      |
+| **RecentActivity**          | Tracks latest operations                      |
+| **PolicyDecisionLog (new)** | Displays OPA evaluation results               |
+| **ZKPStatusCard (new)**     | Displays last proof state & timestamp         |
+
+---
+
+### 🔒 Risk & Security Components
+
+| Component                   | Purpose                                |
+| --------------------------- | -------------------------------------- |
+| **RiskIndicator**           | Low/Medium/High/Critical badges        |
+| **SecurityAlert**           | Shows real-time security notifications |
+| **AccessDenied**            | Displays OPA denial info               |
+| **PolicyTooltip**           | Explains active OPA rules              |
+| **ContextMonitor (new)**    | Shows location/device/IP               |
+| **OPADecisionViewer (new)** | Displays raw OPA JSON decision         |
+| **ProofStatusBanner (new)** | Shows ZKP status visually              |
+
+---
+
+### 🧑‍💼 Admin Components
+
+| Component                | Purpose                                    |
+| ------------------------ | ------------------------------------------ |
+| **AdminDashboard**       | System overview (OPA + ZKP stats)          |
+| **UserManagement**       | User table with risk + proof info          |
+| **UserCard**             | Displays risk score, proof, OPA compliance |
+| **AuditLogViewer**       | Shows access logs with reasons             |
+| **SystemStats**          | Charts of ZKP + risk patterns              |
+| **PolicyEditor (new)**   | Edit/test OPA Rego rules in UI             |
+| **ProofAnalytics (new)** | Analyze proof verification trends          |
+
+---
+
+## 🗺️ Page Structure
 
 ```
 /
@@ -52,551 +124,243 @@
 ├── /register
 ├── /dashboard
 ├── /files
-├── /admin (admin only)
+├── /proofs          ← ZKP proof management
+├── /zkauth          ← Multi-factor authentication setup
+├── /policy          ← Policy visualization/editor
+├── /admin
 └── /profile
 ```
 
-## Key Features
+---
 
-### File Upload Flow
-1. User selects files
-2. Risk assessment runs in background
-3. Progress indicator shows upload status
-4. Success/failure notification with risk info
+## 🧠 Key Features
 
-### Access Control Visualization
-- Risk meter showing current user risk level
-- Color-coded access indicators (green/yellow/red)
-- Clear messaging when access is restricted
+### ✅ ZKP Authentication Flow
 
-### Responsive Design
-- Mobile-first approach
-- Clean, minimal interface
-- Focus on usability over complexity
+1. User enters credentials.
+2. Browser **automatically** generates ZKP proof using **Circom/SnarkJS** (no checkbox required).
+3. Proof sent to `/api/zkp/verify`.
+4. On success, user marked verified → low-risk OPA context.
 
-## Component Architecture
+### 🔐 Multi-Factor Authentication Flow
 
-### Context Providers
-- `AuthContext` - User authentication state
-- `FileContext` - File management state
-- `RiskContext` - Risk assessment data
+1. User navigates to `/zkauth` page.
+2. Selects biometric method (fingerprint or face recognition).
+3. **Face Recognition**: Live camera capture → local processing → hash generation.
+4. **Fingerprint**: Simulated scanner → biometric capture → hash generation.
+5. Biometric hash sent to `/api/zk-mfa/register-secret`.
+6. Factor becomes active immediately for enhanced security.
 
-### Custom Hooks
-```typescript
-// Authentication hook
-const useAuth = () => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
-  const [loading, setLoading] = useState(true);
-  
-  const login = async (email: string, password: string) => {
-    const data = await authService.login(email, password);
-    setToken(data.token);
-    setUser(data.user);
-    localStorage.setItem('token', data.token);
-    return data;
-  };
-  
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-  };
-  
-  return { user, token, login, logout, loading };
-};
+### 🧮 OPA Decision Visualization
 
-// File upload hook with progress
-const useFileUpload = () => {
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState(null);
-  
-  const uploadFile = async (file: File, token: string) => {
-    setUploading(true);
-    setError(null);
-    setProgress(0);
-    
-    try {
-      const result = await fileService.uploadFile(file, token, setProgress);
-      return result;
-    } catch (err) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setUploading(false);
-      setProgress(0);
-    }
-  };
-  
-  return { uploadFile, uploading, progress, error };
-};
+* Every sensitive action triggers an OPA policy check.
+* Frontend visualizes `allow` / `deny` decision.
+* User can **view the exact reason** if denied.
 
-// Risk assessment hook
-const useRiskAssessment = () => {
-  const [riskData, setRiskData] = useState(null);
+### 📁 File Upload Flow
+
+1. Pre-upload OPA risk check.
+2. Proof validation if file sensitive.
+3. Real-time progress bar + risk alert.
+4. Denials show reason in modal (e.g., *“Location mismatch: registered in Pune, accessed from Delhi”*).
+
+---
+
+## ⚙️ Context Providers
+
+```tsx
+<AuthContext>        // Auth + ZKP verification
+<FileContext>        // File data & OPA decisions
+<RiskContext>        // Risk scoring + metrics
+<ZKPContext>         // Proof status & generation
+<PolicyContext>      // OPA evaluation results
+<ReasonContext>      // Stores rejection reason (new)
+```
+
+---
+
+## 🪄 Custom Hooks
+
+### 🧩 useZKP
+
+```tsx
+const useZKP = () => {
+  const [proofStatus, setProofStatus] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  const assessRisk = async (token: string) => {
+
+  const generateProof = async (inputs) => {
     setLoading(true);
-    try {
-      const data = await riskService.getRiskAssessment(token);
-      setRiskData(data);
-      return data;
-    } finally {
-      setLoading(false);
-    }
+    const proof = await zkpService.generate(inputs);
+    const verified = await zkpService.verify(proof);
+    setProofStatus(verified);
+    setLoading(false);
+    return verified;
   };
-  
-  const getRiskLevel = (score: number) => {
-    if (score <= 30) return 'low';
-    if (score <= 60) return 'medium';
-    if (score <= 80) return 'high';
-    return 'critical';
-  };
-  
-  return { riskData, assessRisk, getRiskLevel, loading };
-};
 
-// Admin operations hook
-const useAdmin = () => {
-  const [users, setUsers] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [stats, setStats] = useState(null);
-  
-  const toggleUserBlock = async (userId: string, blocked: boolean, token: string) => {
-    const result = await adminService.toggleUserBlock(userId, blocked, token);
-    // Update local state
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, isBlocked: blocked } : user
-    ));
-    return result;
-  };
-  
-  return { users, auditLogs, stats, toggleUserBlock, setUsers, setAuditLogs, setStats };
+  return { proofStatus, generateProof, loading };
 };
 ```
 
-## Implementation Steps
+### ⚖️ usePolicy
 
-1. **Setup React Router**
-   - Configure routes
-   - Protected route wrapper
-   - Navigation component
+```tsx
+const usePolicy = () => {
+  const [decision, setDecision] = useState(null);
+  const [reason, setReason] = useState(null);
 
-2. **Authentication UI**
-   - Login/register forms
-   - JWT token handling
-   - Auto-logout on token expiry
+  const evaluatePolicy = async (context, token) => {
+    const res = await policyService.evaluate(context, token);
+    setDecision(res.decision);
+    setReason(res.reason || null);
+    return res;
+  };
 
-3. **File Management Interface**
-   - Upload component with drag & drop
-   - File list with download/delete actions
-   - Progress indicators
-
-4. **Risk Visualization**
-   - Risk meter component
-   - Access status indicators
-   - Policy explanation tooltips
-
-5. **Admin Interface**
-   - User management table
-   - Audit log viewer
-   - Policy configuration forms
-
-6. **Responsive Styling**
-   - Mobile-friendly layouts
-   - Consistent design system
-   - Loading states and error handling
-
-## API Integration
-
-### Authentication Service
-```typescript
-// Login with risk assessment
-const login = async (email: string, password: string) => {
-  const response = await fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.error || 'Login failed');
-  }
-  
-  return data; // { token, user, riskScore }
-};
-
-// Register new user
-const register = async (email: string, password: string) => {
-  const response = await fetch('/api/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  return response.json();
-};
-
-// Get current user
-const getCurrentUser = async (token: string) => {
-  const response = await fetch('/api/auth/me', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.json();
+  return { decision, reason, evaluatePolicy };
 };
 ```
 
-### File Operations
-```typescript
-// Upload file with progress tracking
-const uploadFile = async (file: File, token: string, onProgress?: (progress: number) => void) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  
-  const xhr = new XMLHttpRequest();
-  
-  return new Promise((resolve, reject) => {
-    xhr.upload.addEventListener('progress', (e) => {
-      if (e.lengthComputable && onProgress) {
-        onProgress((e.loaded / e.total) * 100);
-      }
+---
+
+## 🪪 New Component – RejectionReasonModal
+
+```tsx
+const RejectionReasonModal = ({ reason, onClose }) => {
+  if (!reason) return null;
+  return (
+    <div className="modal">
+      <h2>Access Denied</h2>
+      <p>{reason.details}</p>
+      <div className="reason-details">
+        <p><b>Policy:</b> {reason.policy?.description}</p>
+        <p><b>Risk Score:</b> {reason.riskScore}</p>
+        <p><b>Location:</b> {reason.factors?.location}</p>
+        <p><b>Registered:</b> {reason.factors?.registeredLocation}</p>
+        <p><b>Fingerprint Match:</b> {reason.factors?.fingerprintMatch ? "Yes" : "No"}</p>
+      </div>
+      <button onClick={onClose}>Close</button>
+    </div>
+  );
+};
+```
+
+---
+
+## 🔗 API Integration (Extended)
+
+### 🔒 ZKP Service
+
+```ts
+const zkpService = {
+  generate: async (inputs) => {
+    const res = await fetch('/api/zkp/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(inputs)
     });
-    
-    xhr.addEventListener('load', () => {
-      if (xhr.status === 201) {
-        resolve(JSON.parse(xhr.responseText));
-      } else {
-        reject(new Error('Upload failed'));
-      }
+    return res.json();
+  },
+  verify: async (proof) => {
+    const res = await fetch('/api/zkp/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(proof)
     });
-    
-    xhr.open('POST', '/api/files/upload');
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.send(formData);
-  });
-};
-
-// Get user files
-const getUserFiles = async (token: string) => {
-  const response = await fetch('/api/files', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.json();
-};
-
-// Download file (get presigned URL)
-const downloadFile = async (fileId: string, token: string) => {
-  const response = await fetch(`/api/files/${fileId}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  const data = await response.json();
-  
-  if (response.ok) {
-    // Open download URL in new tab
-    window.open(data.downloadUrl, '_blank');
+    return res.json();
   }
-  
-  return data;
-};
-
-// Delete file
-const deleteFile = async (fileId: string, token: string) => {
-  const response = await fetch(`/api/files/${fileId}`, {
-    method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.json();
 };
 ```
 
-### Risk Assessment
-```typescript
-// Get current risk score
-const getRiskAssessment = async (token: string) => {
-  const response = await fetch('/api/risk/evaluate', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.json();
-};
+### 🧩 Policy Service
 
-// Get risk policies
-const getRiskPolicies = async (token: string) => {
-  const response = await fetch('/api/risk/policies', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.json();
-};
-```
-
-### Admin Operations
-```typescript
-// Get all users (admin only)
-const getAllUsers = async (token: string, page = 1, limit = 20) => {
-  const response = await fetch(`/api/admin/users?page=${page}&limit=${limit}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.json();
-};
-
-// Block/unblock user
-const toggleUserBlock = async (userId: string, blocked: boolean, token: string) => {
-  const response = await fetch(`/api/admin/users/${userId}/block`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ blocked })
-  });
-  return response.json();
-};
-
-// Get audit logs
-const getAuditLogs = async (token: string, filters = {}) => {
-  const params = new URLSearchParams(filters);
-  const response = await fetch(`/api/admin/audit?${params}`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.json();
-};
-
-// Get system stats
-const getSystemStats = async (token: string) => {
-  const response = await fetch('/api/admin/stats', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return response.json();
+```ts
+const policyService = {
+  evaluate: async (context, token) => {
+    const res = await fetch('/api/policy/evaluate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(context)
+    });
+    return res.json(); // includes decision + reason
+  },
+  getRules: async (token) => {
+    const res = await fetch('/api/policy/rules', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return res.json();
+  }
 };
 ```
 
-## Design System & Styling
+---
 
-### Color Palette
-```css
-:root {
-  /* Primary Colors */
-  --color-brand: #10b981;
-  --color-brand-hover: #059669;
-  --color-brand-light: #d1fae5;
-  
-  /* Neutral Colors */
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-  
-  /* Status Colors */
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #3b82f6;
-  
-  /* Background Colors */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
-  
-  /* Border Colors */
-  --color-border: #e5e7eb;
-  --color-border-hover: #d1d5db;
-}
-```
+## 🌐 Environment Variables
 
-### Typography
-```css
-/* Font Stack */
---font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-
-/* Font Sizes */
---text-xs: 0.75rem;    /* 12px */
---text-sm: 0.875rem;   /* 14px */
---text-base: 1rem;     /* 16px */
---text-lg: 1.125rem;   /* 18px */
---text-xl: 1.25rem;    /* 20px */
---text-2xl: 1.5rem;    /* 24px */
---text-3xl: 1.875rem;  /* 30px */
-
-/* Font Weights */
---font-normal: 400;
---font-medium: 500;
---font-semibold: 600;
---font-bold: 700;
-```
-
-### Spacing System
-```css
-/* Spacing Scale (rem units) */
---space-1: 0.25rem;   /* 4px */
---space-2: 0.5rem;    /* 8px */
---space-3: 0.75rem;   /* 12px */
---space-4: 1rem;      /* 16px */
---space-5: 1.25rem;   /* 20px */
---space-6: 1.5rem;    /* 24px */
---space-8: 2rem;      /* 32px */
---space-10: 2.5rem;   /* 40px */
---space-12: 3rem;     /* 48px */
---space-16: 4rem;     /* 64px */
-```
-
-### Component Styles
-
-#### Buttons
-```css
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2) var(--space-4);
-  border-radius: 6px;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-primary {
-  background-color: var(--color-brand);
-  color: white;
-  border-color: var(--color-brand);
-}
-
-.btn-primary:hover {
-  background-color: var(--color-brand-hover);
-}
-
-.btn-secondary {
-  background-color: white;
-  color: var(--color-gray-700);
-  border-color: var(--color-border);
-}
-
-.btn-secondary:hover {
-  background-color: var(--color-gray-50);
-  border-color: var(--color-border-hover);
-}
-```
-
-#### Cards
-```css
-.card {
-  background-color: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: var(--space-6);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-}
-```
-
-#### Forms
-```css
-.form-group {
-  margin-bottom: var(--space-4);
-}
-
-.form-label {
-  display: block;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--color-gray-700);
-  margin-bottom: var(--space-2);
-}
-
-.form-input {
-  width: 100%;
-  padding: var(--space-3) var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: var(--text-sm);
-  transition: border-color 0.15s ease;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px var(--color-brand-light);
-}
-```
-
-#### Risk Indicators
-```css
-.risk-indicator {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-1) var(--space-3);
-  border-radius: 12px;
-  font-size: var(--text-xs);
-  font-weight: var(--font-medium);
-}
-
-.risk-low {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.risk-medium {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.risk-high {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-```
-
-### Layout Principles
-- **Clean whitespace**: Generous spacing between elements
-- **Consistent alignment**: Left-align text, center-align actions
-- **Subtle shadows**: Minimal elevation for cards and modals
-- **Sharp corners**: 6-8px border radius, no excessive rounding
-- **Monochromatic approach**: Rely on grays with single brand color
-- **Clear hierarchy**: Use font weight and size, not color, for emphasis
-
-### Component Guidelines
-- No gradients or fancy effects
-- Solid colors only
-- Consistent border radius (6-8px)
-- Subtle hover states with opacity/color changes
-- Focus states with brand color outline
-- Loading states with simple spinners or skeleton screens
-
-## Environment Variables
 ```
 VITE_API_URL=http://localhost:3000
-VITE_APP_NAME=Cloud Storage Platform
+VITE_OPA_ENDPOINT=http://localhost:8181/v1/data/policy/evaluate
+VITE_ZKP_MODE=browser
+VITE_SSI_PROVIDER=did:web
 ```
 
-## Folder Structure
+---
+
+## 🗂️ Folder Structure
+
 ```
 src/
 ├── components/
 │   ├── auth/
 │   ├── files/
 │   ├── admin/
+│   ├── zkproofs/        ← new
+│   ├── zkauth/          ← new (MFA components)
+│   ├── policy/          ← new
+│   ├── security/        ← new (RejectionReasonModal, Risk UI)
 │   └── common/
 ├── contexts/
+│   ├── AuthContext.tsx
+│   ├── FileContext.tsx
+│   ├── RiskContext.tsx
+│   ├── ZKPContext.tsx
+│   ├── PolicyContext.tsx
+│   └── ReasonContext.tsx   ← new
 ├── hooks/
+│   ├── useAuth.ts
+│   ├── useZKP.ts
+│   ├── usePolicy.ts
+│   ├── useRiskAssessment.ts
+│   └── useRejectionReason.ts ← new
 ├── pages/
-├── types/
+│   ├── Dashboard.tsx
+│   ├── Proofs.tsx
+│   ├── ZKAuth.tsx       ← new (MFA page)
+│   ├── Policy.tsx
+│   └── Files.tsx
 ├── utils/
+│   ├── zkpService.ts
+│   ├── policyService.ts
+│   └── contextUtils.ts
 └── styles/
     ├── globals.css
-    ├── variables.css
-    └── components.css
+    ├── components.css
+    └── variables.css
 ```
+
+---
+
+## ✅ Final Summary of Additions
+
+| Enhancement                    | Description                         |
+| ------------------------------ | ----------------------------------- |
+| **OPA Integration**            | Policy evaluation before actions    |
+| **ZKP Authentication**         | Proof-based identity verification   |
+| **SSI Integration**            | DID-based identity display          |
+| **Rejection Reason System**    | Detailed transparency for denials   |
+| **Policy Visualization Tools** | Admin & user OPA log viewers        |
+| **Context Monitor**            | Real-time location/device tracking  |
+| **Proof Analytics + Editor**   | Admin tools for advanced governance |
+
+

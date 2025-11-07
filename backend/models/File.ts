@@ -9,6 +9,9 @@ export interface IFile extends Document {
   mimeType: string;
   uploadedAt: Date;
   accessCount: number;
+  riskLevel?: 'low' | 'medium' | 'high';
+  opaDecision?: 'allow' | 'deny';
+  rejectionReason?: string;
 }
 
 const fileSchema = new Schema<IFile>({
@@ -45,6 +48,18 @@ const fileSchema = new Schema<IFile>({
   accessCount: {
     type: Number,
     default: 0
+  },
+  riskLevel: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'low'
+  },
+  opaDecision: {
+    type: String,
+    enum: ['allow', 'deny']
+  },
+  rejectionReason: {
+    type: String
   }
 });
 

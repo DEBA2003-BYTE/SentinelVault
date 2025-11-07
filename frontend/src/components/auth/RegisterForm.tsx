@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, AlertCircle } from 'lucide-react';
+import { Shield, AlertCircle, Smartphone, MapPin, Globe } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ApiError } from '../../services/api';
 
@@ -11,7 +11,7 @@ const RegisterForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  const { register } = useAuth();
+  const { register, deviceContext } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,12 +46,50 @@ const RegisterForm: React.FC = () => {
   };
 
   return (
-    <div className="auth-container">
-      <div className="card" style={{ width: '100%', maxWidth: '400px' }}>
+    <div className="auth-container" style={{
+      background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'var(--space-4)'
+    }}>
+      <div className="card" style={{ 
+        width: '100%', 
+        maxWidth: '500px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        borderRadius: '20px',
+        padding: 'var(--space-8)'
+      }}>
         <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
-          <Shield size={48} style={{ color: 'var(--color-brand)', marginBottom: 'var(--space-4)' }} />
-          <h1 style={{ marginBottom: 'var(--space-2)' }}>Create Account</h1>
-          <p style={{ color: 'var(--color-gray-600)', marginBottom: 0 }}>
+          <div style={{
+            width: '80px',
+            height: '80px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto var(--space-4)',
+            boxShadow: '0 10px 25px -5px rgba(245, 87, 108, 0.4)'
+          }}>
+            <Shield size={40} style={{ color: 'white' }} />
+          </div>
+          <h1 style={{ 
+            marginBottom: 'var(--space-2)',
+            fontSize: '2rem',
+            fontWeight: 'var(--font-bold)',
+            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            Create Account
+          </h1>
+          <p style={{ color: 'var(--color-gray-600)', marginBottom: 0, fontSize: 'var(--text-lg)' }}>
             Join our secure cloud storage platform
           </p>
         </div>
@@ -60,6 +98,43 @@ const RegisterForm: React.FC = () => {
           <div className="alert alert-error" style={{ marginBottom: 'var(--space-4)' }}>
             <AlertCircle size={16} style={{ marginRight: 'var(--space-2)' }} />
             {error}
+          </div>
+        )}
+
+        {/* Device Registration Info */}
+        {deviceContext && (
+          <div className="device-registration-info" style={{ marginBottom: 'var(--space-4)' }}>
+            <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-3)' }}>
+              Device Registration
+            </h4>
+            <div className="registration-details">
+              <div className="registration-item">
+                <Smartphone className="w-4 h-4" />
+                <div>
+                  <span className="label">Device Fingerprint:</span>
+                  <span className="value">{deviceContext.fingerprint.slice(0, 12)}...</span>
+                </div>
+              </div>
+              {deviceContext.location && (
+                <div className="registration-item">
+                  <MapPin className="w-4 h-4" />
+                  <div>
+                    <span className="label">Location:</span>
+                    <span className="value">{deviceContext.location}</span>
+                  </div>
+                </div>
+              )}
+              <div className="registration-item">
+                <Globe className="w-4 h-4" />
+                <div>
+                  <span className="label">Browser:</span>
+                  <span className="value">{deviceContext.userAgent.split(' ')[0]}</span>
+                </div>
+              </div>
+            </div>
+            <div className="registration-note">
+              <small>This device and location will be registered for enhanced security.</small>
+            </div>
           </div>
         )}
 

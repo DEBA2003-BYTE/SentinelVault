@@ -1,0 +1,36 @@
+
+> frontend@0.0.0 dev
+> vite
+
+
+  VITE v7.1.11  ready in 75 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+3:45:49 PM [vite] (client) hmr update /src/styles/components.css
+3:45:56 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:45:56 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:45:59 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:46:03 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:46:12 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:46:32 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:46:41 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:47:05 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:47:21 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:50:30 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:50:39 PM [vite] (client) hmr update /src/styles/components.css
+3:51:00 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:51:17 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:51:24 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:51:29 PM [vite] (client) hmr update /src/pages/Admin.tsx
+3:51:35 PM [vite] (client) hmr update /src/styles/components.css
+3:51:36 PM [vite] (client) hmr update /src/styles/components.css
+4:01:12 PM [vite] (client) hmr update /src/pages/Admin.tsx
+4:01:32 PM [vite] (client) hmr update /src/pages/Admin.tsx
+4:01:55 PM [vite] (client) hmr update /src/styles/components.css
+4:02:01 PM [vite] (client) hmr update /src/styles/components.css
+4:03:53 PM [vite] (client) hmr update /src/styles/components.css
+4:03:58 PM [vite] (client) hmr update /src/styles/components.css
+4:19:50 PM [vite] (client) hmr update /src/pages/Feedback.tsx
+4:19:58 PM [vite] (client) hmr update /src/pages/Feedback.tsx
+4:20:02 PM [vite] (client) hmr update /src/pages/Feedback.tsx

@@ -5,7 +5,26 @@ export interface IUser extends Document {
   passwordHash: string;
   isBlocked: boolean;
   isAdmin: boolean;
-  zkProofData?: object;
+  zkProofData?: {
+    proof: string;
+    publicSignals: string[];
+    verified: boolean;
+    verifiedAt?: Date;
+  };
+  mfaFactors?: {
+    type: string;
+    secretHash: string;
+    isActive: boolean;
+    createdAt: Date;
+    lastUsed?: Date;
+    metadata?: any;
+  }[];
+  did?: string;
+  deviceFingerprint?: string;
+  registeredLocation?: string;
+  lastKnownLocation?: string;
+  lastDeviceFingerprint?: string;
+  rejectionReasons?: string[];
   createdAt: Date;
   lastLogin?: Date;
 }
@@ -31,9 +50,46 @@ const userSchema = new Schema<IUser>({
     default: false
   },
   zkProofData: {
-    type: Schema.Types.Mixed,
-    default: null
+    proof: String,
+    publicSignals: [String],
+    verified: {
+      type: Boolean,
+      default: false
+    },
+    verifiedAt: Date
   },
+  mfaFactors: [{
+    type: String,
+    secretHash: String,
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    lastUsed: Date,
+    metadata: Schema.Types.Mixed
+  }],
+  did: {
+    type: String
+  },
+  deviceFingerprint: {
+    type: String
+  },
+  registeredLocation: {
+    type: String
+  },
+  lastKnownLocation: {
+    type: String
+  },
+  lastDeviceFingerprint: {
+    type: String
+  },
+  rejectionReasons: [{
+    type: String
+  }],
   createdAt: {
     type: Date,
     default: Date.now

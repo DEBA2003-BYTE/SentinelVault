@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Upload, Shield, Activity } from 'lucide-react';
+import { FileText, Upload, Shield, Key } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+
 import { fileService, riskService } from '../services/api';
 import type { FileItem, RiskAssessment } from '../types';
 import RiskIndicator from '../components/common/RiskIndicator';
+import ZKPStatusCard from '../components/zkproofs/ZKPStatusCard';
+import QuickZKPVerify from '../components/zkproofs/QuickZKPVerify';
+import RiskMeter from '../components/security/RiskMeter';
 
 const Dashboard: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user, token, deviceContext } = useAuth();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [riskData, setRiskData] = useState<RiskAssessment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +57,10 @@ const Dashboard: React.FC = () => {
       </div>
     );
   }
+
+  // Debug logging
+  console.log('Dashboard user data:', user);
+  console.log('Dashboard device context:', deviceContext);
 
   return (
     <div className="page-container">
@@ -131,24 +139,26 @@ const Dashboard: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
             <div style={{
               padding: 'var(--space-3)',
-              backgroundColor: '#fef3c7',
+              backgroundColor: user?.zkpVerified ? '#d1fae5' : '#fef3c7',
               borderRadius: '8px'
             }}>
-              <Activity size={24} style={{ color: 'var(--color-warning)' }} />
+              <Key size={24} style={{ 
+                color: user?.zkpVerified ? 'var(--color-success)' : 'var(--color-warning)' 
+              }} />
             </div>
             <div>
               <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>
-                {riskData?.recentActivity.length || 0}
+                {user?.zkpVerified ? 'Yes' : 'No'}
               </div>
               <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-600)' }}>
-                Recent Actions
+                ZKP Verified
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2" style={{ gap: 'var(--space-8)' }}>
+      <div className="grid grid-cols-3" style={{ gap: 'var(--space-8)' }}>
         {/* Recent Files */}
         <div className="card">
           <div className="card-header">
@@ -195,28 +205,58 @@ const Dashboard: React.FC = () => {
           {riskData ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
               <div style={{ textAlign: 'center' }}>
-                <RiskIndicator score={riskData.riskScore} size="lg" />
+                <RiskMeter riskScore={riskData.riskScore} size="medium" />
               </div>
               
               <div>
                 <h4 style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-semibold)', marginBottom: 'var(--space-2)' }}>
-                  Risk Factors
+                  Security Factors
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
-                    <span>IP Address:</span>
-                    <span style={{ color: 'var(--color-gray-600)' }}>{riskData.factors.ipAddress}</span>
-                  </div>
-                  {riskData.factors.location && (
+                  {/* Only show ZKP if verified */}
+                  {user?.zkpVerified === true && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
-                      <span>Location:</span>
-                      <span style={{ color: 'var(--color-gray-600)' }}>{riskData.factors.location}</span>
+                      <span>ZKP Verified:</span>
+                      <span style={{ color: 'var(--color-success)' }}>
+                        Yes
+                      </span>
                     </div>
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
-                    <span>Recent Failures:</span>
-                    <span style={{ color: 'var(--color-gray-600)' }}>{riskData.factors.recentFailures}</span>
-                  </div>
+                  
+                  {/* Only show Device if registered */}
+                  {(user?.deviceFingerprint && user.deviceFingerprint !== 'unknown' && user.deviceFingerprint.length > 0) && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
+                      <span>Device Registered:</span>
+                      <span style={{ color: 'var(--color-success)' }}>
+                        Yes
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Always show location if available */}
+                  {(user?.registeredLocation || deviceContext?.location) && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
+                      <span>Location:</span>
+                      <span style={{ color: 'var(--color-gray-600)' }}>
+                        {user?.registeredLocation || deviceContext?.location}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Show message if no security factors are active */}
+                  {!user?.zkpVerified && 
+                   !(user?.deviceFingerprint && user.deviceFingerprint !== 'unknown' && user.deviceFingerprint.length > 0) && 
+                   !(user?.registeredLocation || deviceContext?.location) && (
+                    <div style={{ 
+                      fontSize: 'var(--text-sm)', 
+                      color: 'var(--color-gray-500)', 
+                      fontStyle: 'italic',
+                      textAlign: 'center',
+                      padding: 'var(--space-2)'
+                    }}>
+                      Complete verification to enhance security
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -254,6 +294,16 @@ const Dashboard: React.FC = () => {
               Loading security status...
             </div>
           )}
+        </div>
+
+        {/* ZKP Status */}
+        <div>
+          <ZKPStatusCard />
+        </div>
+
+        {/* Quick ZKP Verification */}
+        <div>
+          <QuickZKPVerify />
         </div>
       </div>
     </div>

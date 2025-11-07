@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Simple Login Test</h1>
+        <p>Test basic login functionality without complex location detection.</p>
+
+        <div class="test-section">
+            <h3>Test 1: Admin Login</h3>
+            <button onclick="testAdminLogin()">Test Admin Login</button>
+            <div id="adminResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: Register New User</h3>
+            <input type="email" id="testEmail" placeholder="Enter test email" value="testuser@example.com">
+            <input type="password" id="testPassword" placeholder="Enter password" value="TestPassword123!">
+            <button onclick="testRegistration()">Test Registration</button>
+            <div id="registerResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: User Login</h3>
+            <button onclick="testUserLogin()">Test User Login</button>
+            <div id="loginResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 4: Check Server Status</h3>
+            <button onclick="checkServerStatus()">Check Server</button>
+            <div id="serverResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        async function testAdminLogin() {
+            showResult('adminResult', 'Testing admin login...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/admin-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@gmail.com',
+                        password: 'SecureAdmin123!'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('adminResult', 
+                        `✅ Admin login successful!\n` +
+                        `Email: ${data.user.email}\n` +
+                        `Role: ${data.user.isAdmin ? 'Admin' : 'User'}\n` +
+                        `Token: ${data.token.substring(0, 20)}...`,
+                        'success'
+                    );
+                } else {
+                    showResult('adminResult', 
+                        `❌ Admin login failed: ${data.error || 'Unknown error'}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('adminResult', 
+                    `❌ Network error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function testRegistration() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            
+            showResult('registerResult', 'Testing registration...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        location: 'Test Location, Test Country' // Manual location
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('registerResult', 
+                        `✅ Registration successful!\n` +
+                        `Email: ${data.user.email}\n` +
+                        `Location: ${data.user.registeredLocation || 'Not set'}\n` +
+                        `Device: ${data.user.deviceFingerprint ? 'Generated' : 'Not generated'}\n` +
+                        `Token: ${data.token.substring(0, 20)}...`,
+                        'success'
+                    );
+                } else {
+                    showResult('registerResult', 
+                        `❌ Registration failed: ${data.error || 'Unknown error'}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('registerResult', 
+                    `❌ Network error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function testUserLogin() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            
+            showResult('loginResult', 'Testing user login...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        location: 'Test Location, Test Country' // Manual location
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('loginResult', 
+                        `✅ User login successful!\n` +
+                        `Email: ${data.user.email}\n` +
+                        `Location: ${data.user.lastKnownLocation || 'Not set'}\n` +
+                        `Risk Score: ${data.riskScore || 'Not calculated'}\n` +
+                        `Token: ${data.token.substring(0, 20)}...`,
+                        'success'
+                    );
+                } else {
+                    showResult('loginResult', 
+                        `❌ User login failed: ${data.error || 'Unknown error'}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('loginResult', 
+                    `❌ Network error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function checkServerStatus() {
+            showResult('serverResult', 'Checking server status...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'OPTIONS'
+                });
+                
+                if (response.ok || response.status === 404) {
+                    showResult('serverResult', 
+                        `✅ Server is running!\n` +
+                        `Status: ${response.status}\n` +
+                        `CORS: ${response.headers.get('access-control-allow-origin') ? 'Enabled' : 'Check configuration'}`,
+                        'success'
+                    );
+                } else {
+                    showResult('serverResult', 
+                        `⚠️ Server responded with status: ${response.status}`,
+                        'info'
+                    );
+                }
+            } catch (error) {
+                showResult('serverResult', 
+                    `❌ Server not reachable: ${error.message}\n` +
+                    `Make sure backend is running on http://localhost:3000`,
+                    'error'
+                );
+            }
+        }
+
+        // Auto-check server status on load
+        window.onload = function() {
+            checkServerStatus();
+        };
+    </script>
+</body>
+</html>

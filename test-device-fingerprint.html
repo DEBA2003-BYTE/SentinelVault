@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Fingerprint Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Device Fingerprint & User Data Test</h1>
+        <p>Test device fingerprint generation and user data retrieval.</p>
+
+        <div class="test-section">
+            <h3>Test 1: Generate Device Fingerprint</h3>
+            <button onclick="testDeviceFingerprint()">Generate Fingerprint</button>
+            <div id="fingerprintResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: Register User with Device Context</h3>
+            <input type="email" id="testEmail" placeholder="Enter test email" value="devicetest@example.com">
+            <input type="password" id="testPassword" placeholder="Enter password" value="TestPassword123!">
+            <button onclick="testRegistrationWithDevice()">Register with Device Context</button>
+            <div id="registerDeviceResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: Login and Check User Data</h3>
+            <button onclick="testLoginAndUserData()">Login and Check Data</button>
+            <div id="loginDataResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 4: Admin View User Data</h3>
+            <button onclick="testAdminViewUser()">View User as Admin</button>
+            <div id="adminViewResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        // Device fingerprint generation (simplified version)
+        function generateDeviceFingerprint() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (ctx) {
+                ctx.textBaseline = 'top';
+                ctx.font = '14px Arial';
+                ctx.fillText('Device fingerprint', 2, 2);
+            }
+            const canvasFingerprint = canvas.toDataURL();
+
+            const fingerprintData = {
+                canvas: canvasFingerprint.slice(-50),
+                screen: {
+                    width: window.screen.width,
+                    height: window.screen.height,
+                    colorDepth: window.screen.colorDepth
+                },
+                navigator: {
+                    userAgent: window.navigator.userAgent,
+                    language: window.navigator.language,
+                    platform: window.navigator.platform
+                },
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                timestamp: Date.now()
+            };
+
+            const fingerprint = btoa(JSON.stringify(fingerprintData))
+                .replace(/[^a-zA-Z0-9]/g, '')
+                .slice(0, 32);
+
+            return fingerprint;
+        }
+
+        async function testDeviceFingerprint() {
+            showResult('fingerprintResult', 'Generating device fingerprint...', 'info');
+            
+            try {
+                const fingerprint = generateDeviceFingerprint();
+                
+                const deviceInfo = {
+                    fingerprint: fingerprint,
+                    userAgent: navigator.userAgent,
+                    screen: `${screen.width}x${screen.height}`,
+                    language: navigator.language,
+                    platform: navigator.platform,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                };
+
+                showResult('fingerprintResult', 
+                    `✅ Device fingerprint generated successfully!\n\n` +
+                    `Fingerprint: ${fingerprint}\n` +
+                    `User Agent: ${deviceInfo.userAgent}\n` +
+                    `Screen: ${deviceInfo.screen}\n` +
+                    `Language: ${deviceInfo.language}\n` +
+                    `Platform: ${deviceInfo.platform}\n` +
+                    `Timezone: ${deviceInfo.timezone}`,
+                    'success'
+                );
+            } catch (error) {
+                showResult('fingerprintResult', 
+                    `❌ Error generating fingerprint: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function testRegistrationWithDevice() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            
+            showResult('registerDeviceResult', 'Testing registration with device context...', 'info');
+            
+            try {
+                const deviceFingerprint = generateDeviceFingerprint();
+                
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        deviceFingerprint: deviceFingerprint,
+                        location: 'Test City, Test Country'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('registerDeviceResult', 
+                        `✅ Registration successful!\n\n` +
+                        `User ID: ${data.user.id}\n` +
+                        `Email: ${data.user.email}\n` +
+                        `Is Admin: ${data.user.isAdmin}\n` +
+                        `ZKP Verified: ${data.user.zkpVerified}\n` +
+                        `Device Fingerprint: ${data.user.deviceFingerprint || 'Not set'}\n` +
+                        `Registered Location: ${data.user.registeredLocation || 'Not set'}\n` +
+                        `Token: ${data.token.substring(0, 30)}...`,
+                        'success'
+                    );
+                } else {
+                    showResult('registerDeviceResult', 
+                        `❌ Registration failed: ${data.error || 'Unknown error'}\n` +
+                        `Details: ${JSON.stringify(data, null, 2)}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('registerDeviceResult', 
+                    `❌ Network error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function testLoginAndUserData() {
+            const email = document.getElementById('testEmail').value;
+            const password = document.getElementById('testPassword').value;
+            
+            showResult('loginDataResult', 'Testing login and user data...', 'info');
+            
+            try {
+                const deviceFingerprint = generateDeviceFingerprint();
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        deviceFingerprint: deviceFingerprint,
+                        location: 'Test City, Test Country'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('loginDataResult', 
+                        `✅ Login successful!\n\n` +
+                        `=== USER DATA ===\n` +
+                        `User ID: ${data.user.id}\n` +
+                        `Email: ${data.user.email}\n` +
+                        `Is Admin: ${data.user.isAdmin}\n` +
+                        `ZKP Verified: ${data.user.zkpVerified}\n` +
+                        `Device Fingerprint: ${data.user.deviceFingerprint || 'Not set'}\n` +
+                        `Registered Location: ${data.user.registeredLocation || 'Not set'}\n\n` +
+                        `=== LOGIN RESPONSE ===\n` +
+                        `Risk Score: ${data.riskScore}\n` +
+                        `ZKP Verified (response): ${data.zkpVerified}\n` +
+                        `Device Info: ${data.deviceInfo ? JSON.stringify(data.deviceInfo, null, 2) : 'Not available'}\n` +
+                        `Token: ${data.token.substring(0, 30)}...`,
+                        'success'
+                    );
+                } else {
+                    showResult('loginDataResult', 
+                        `❌ Login failed: ${data.error || 'Unknown error'}\n` +
+                        `Details: ${JSON.stringify(data, null, 2)}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('loginDataResult', 
+                    `❌ Network error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function testAdminViewUser() {
+            const email = document.getElementById('testEmail').value;
+            
+            showResult('adminViewResult', 'Getting admin view of user...', 'info');
+            
+            try {
+                // First login as admin
+                const adminResponse = await fetch(`${API_BASE}/auth/admin-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@gmail.com',
+                        password: 'SecureAdmin123!'
+                    })
+                });
+
+                if (!adminResponse.ok) {
+                    showResult('adminViewResult', 
+                        `❌ Admin login failed`,
+                        'error'
+                    );
+                    return;
+                }
+
+                const adminData = await adminResponse.json();
+                const adminToken = adminData.token;
+
+                // Get all users
+                const usersResponse = await fetch(`${API_BASE}/admin/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${adminToken}`
+                    }
+                });
+
+                const usersData = await usersResponse.json();
+                
+                if (usersResponse.ok) {
+                    const testUser = usersData.users.find(u => u.email === email);
+                    
+                    if (testUser) {
+                        showResult('adminViewResult', 
+                            `✅ Found user in admin panel!\n\n` +
+                            `=== ADMIN VIEW DATA ===\n` +
+                            `User ID: ${testUser.id}\n` +
+                            `Email: ${testUser.email}\n` +
+                            `Is Admin: ${testUser.isAdmin}\n` +
+                            `Is Blocked: ${testUser.isBlocked}\n` +
+                            `Device Fingerprint: ${testUser.deviceFingerprint || 'Not set'}\n` +
+                            `Registered Location: ${testUser.registeredLocation || 'Not set'}\n` +
+                            `Created At: ${testUser.createdAt}\n` +
+                            `Last Login: ${testUser.lastLogin || 'Never'}\n\n` +
+                            `=== ALL USERS ===\n` +
+                            `Total Users: ${usersData.users.length}\n` +
+                            usersData.users.map(u => `- ${u.email} (${u.registeredLocation || 'No location'})`).join('\n'),
+                            'success'
+                        );
+                    } else {
+                        showResult('adminViewResult', 
+                            `⚠️ User not found in admin panel\n\n` +
+                            `Available users:\n` +
+                            usersData.users.map(u => `- ${u.email}`).join('\n'),
+                            'info'
+                        );
+                    }
+                } else {
+                    showResult('adminViewResult', 
+                        `❌ Failed to get users: ${usersData.error}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('adminViewResult', 
+                    `❌ Error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        // Auto-generate fingerprint on load
+        window.onload = function() {
+            testDeviceFingerprint();
+        };
+    </script>
+</body>
+</html>

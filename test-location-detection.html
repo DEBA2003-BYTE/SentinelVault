@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Location Detection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .loading { opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 Location Detection Test</h1>
+        <p>This test checks if the location detection is working properly during registration and login.</p>
+
+        <div class="test-section">
+            <h3>Test 1: Register New User with Location Detection</h3>
+            <button onclick="testRegistrationWithLocation()">Test Registration</button>
+            <div id="registrationResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: Check Current User Location</h3>
+            <button onclick="checkCurrentLocation()">Check Location</button>
+            <div id="locationResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: View All Users and Their Locations</h3>
+            <button onclick="viewAllUsers()">View Users (Admin Required)</button>
+            <div id="usersResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 4: Manual Location Override</h3>
+            <input type="text" id="manualLocation" placeholder="Enter custom location" value="New York, NY, USA">
+            <button onclick="testManualLocation()">Test Manual Location</button>
+            <div id="manualResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let testUserCounter = 1;
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<div class="result info loading">Testing...</div>';
+        }
+
+        async function testRegistrationWithLocation() {
+            showLoading('registrationResult');
+            
+            try {
+                const testEmail = `locationtest${testUserCounter}@example.com`;
+                testUserCounter++;
+                
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: 'TestPassword123!'
+                        // No location provided - should auto-detect
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('registrationResult', 
+                        `✅ Registration successful!<br>` +
+                        `Email: ${testEmail}<br>` +
+                        `Location detected: ${data.user?.registeredLocation || 'Not available'}<br>` +
+                        `Device fingerprint: ${data.user?.deviceFingerprint ? 'Generated' : 'Not generated'}`,
+                        'success'
+                    );
+                } else {
+                    showResult('registrationResult', 
+                        `❌ Registration failed: ${data.error || 'Unknown error'}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('registrationResult', 
+                    `❌ Network error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function checkCurrentLocation() {
+            showLoading('locationResult');
+            
+            try {
+                // Get IP info from a public service
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                
+                // Try to get location info
+                const locationResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+                const locationData = await locationResponse.json();
+                
+                showResult('locationResult',
+                    `🌐 Current IP: ${ipData.ip}<br>` +
+                    `📍 Detected Location: ${locationData.city}, ${locationData.region}, ${locationData.country_name}<br>` +
+                    `🏠 ISP: ${locationData.org}<br>` +
+                    `⚠️ Note: Backend should detect similar location for localhost development`,
+                    'info'
+                );
+            } catch (error) {
+                showResult('locationResult',
+                    `❌ Could not fetch location info: ${error.message}<br>` +
+                    `ℹ️ This is normal for localhost development`,
+                    'info'
+                );
+            }
+        }
+
+        async function viewAllUsers() {
+            showLoading('usersResult');
+            
+            try {
+                // Try to get admin token first
+                const loginResponse = await fetch(`${API_BASE}/auth/admin-login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@gmail.com',
+                        password: 'SecureAdmin123!'
+                    })
+                });
+
+                if (!loginResponse.ok) {
+                    showResult('usersResult', 
+                        `❌ Admin login failed. Cannot view users.`,
+                        'error'
+                    );
+                    return;
+                }
+
+                const loginData = await loginResponse.json();
+                const token = loginData.token;
+
+                // Get all users
+                const usersResponse = await fetch(`${API_BASE}/admin/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const usersData = await usersResponse.json();
+                
+                if (usersResponse.ok) {
+                    let usersList = '<h4>📋 All Users and Their Locations:</h4>';
+                    usersData.users.forEach(user => {
+                        usersList += `
+                            <div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 5px;">
+                                <strong>📧 ${user.email}</strong><br>
+                                📍 Location: ${user.registeredLocation || 'Unknown Location'}<br>
+                                🔒 Device: ${user.deviceFingerprint ? user.deviceFingerprint.substring(0, 20) + '...' : 'Not set'}<br>
+                                📅 Registered: ${new Date(user.createdAt).toLocaleString()}<br>
+                                🔑 Role: ${user.isAdmin ? 'Admin' : 'User'}
+                            </div>
+                        `;
+                    });
+                    
+                    showResult('usersResult', usersList, 'success');
+                } else {
+                    showResult('usersResult', 
+                        `❌ Failed to fetch users: ${usersData.error}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('usersResult', 
+                    `❌ Error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        async function testManualLocation() {
+            showLoading('manualResult');
+            
+            const manualLocation = document.getElementById('manualLocation').value;
+            
+            try {
+                const testEmail = `manuallocation${testUserCounter}@example.com`;
+                testUserCounter++;
+                
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: 'TestPassword123!',
+                        location: manualLocation // Manual location override
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('manualResult', 
+                        `✅ Registration with manual location successful!<br>` +
+                        `Email: ${testEmail}<br>` +
+                        `Requested location: ${manualLocation}<br>` +
+                        `Stored location: ${data.user?.registeredLocation || 'Not available'}<br>` +
+                        `✅ Manual location ${data.user?.registeredLocation === manualLocation ? 'correctly stored' : 'was overridden'}`,
+                        'success'
+                    );
+                } else {
+                    showResult('manualResult', 
+                        `❌ Registration failed: ${data.error || 'Unknown error'}`,
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('manualResult', 
+                    `❌ Network error: ${error.message}`,
+                    'error'
+                );
+            }
+        }
+
+        // Auto-run location check on page load
+        window.onload = function() {
+            checkCurrentLocation();
+        };
+    </script>
+</body>
+</html>

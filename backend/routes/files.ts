@@ -24,13 +24,17 @@ const upload = multer({
       'image/gif',
       'text/plain',
       'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/csv'
     ];
 
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('File type not allowed'));
+      // Return false instead of throwing error
+      cb(null, false);
     }
   }
 });
@@ -40,11 +44,21 @@ router.post('/upload',
   authenticateToken, 
   assessRisk, 
   enforceRiskPolicy(60), // Lower risk threshold for uploads
-  upload.single('file'), 
+  (req, res, next) => {
+    upload.single('file')(req, res, (err) => {
+      if (err) {
+        if (err.message === 'File type not allowed') {
+          return res.status(400).json({ error: 'File type not allowed. Please upload PDF, images, text files, or Office documents.' });
+        }
+        return res.status(400).json({ error: err.message });
+      }
+      next();
+    });
+  },
   async (req: RiskRequest, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file provided' });
+        return res.status(400).json({ error: 'No file provided or file type not allowed' });
       }
 
       const userId = req.user!.id;

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Reference Features Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .test-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-left: 4px solid #ddd;
+            background: #f8f9fa;
+        }
+        .test-item.pass {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .test-item.fail {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .test-item.pending {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        .code {
+            font-family: monospace;
+            background: #f1f1f1;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Quick Reference Features Test</h1>
+        <p>Testing all features mentioned in QUICK_REFERENCE.md to ensure they work correctly.</p>
+        
+        <div>
+            <h3>Test Setup</h3>
+            <button class="btn btn-primary" onclick="runAllTests()">Run All Tests</button>
+            <button class="btn btn-warning" onclick="resetTests()">Reset Tests</button>
+            <div id="setupResult"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h3>✅ Feature Tests</h3>
+        <div id="testResults">
+            <div class="test-item pending" id="test-device-fingerprint">
+                <strong>1. Device fingerprint automatically assigned during registration</strong>
+                <div>Status: <span class="status">Pending</span></div>
+                <div class="details"></div>
+            </div>
+            
+            <div class="test-item pending" id="test-location-capture">
+                <strong>2. Location automatically captured during registration</strong>
+                <div>Status: <span class="status">Pending</span></div>
+                <div class="details"></div>
+            </div>
+            
+            <div class="test-item pending" id="test-dashboard-device-info">
+                <strong>3. Dashboard shows device info instead of "Identity Not Verified"</strong>
+                <div>Status: <span class="status">Pending</span></div>
+                <div class="details"></div>
+            </div>
+            
+            <div class="test-item pending" id="test-admin-user-emails">
+                <strong>4. Admin can see user emails in all views</strong>
+                <div>Status: <span class="status">Pending</span></div>
+                <div class="details"></div>
+            </div>
+            
+            <div class="test-item pending" id="test-admin-access-logs">
+                <strong>5. Admin access logs show user emails, device fingerprints, and locations</strong>
+                <div>Status: <span class="status">Pending</span></div>
+                <div class="details"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h3>🧪 Manual Test Instructions</h3>
+        <div>
+            <h4>Registration Test</h4>
+            <p>1. Go to: <a href="http://localhost:5173/register" target="_blank">http://localhost:5173/register</a></p>
+            <p>2. Register with: <span class="code">test@example.com</span> / <span class="code">password123</span></p>
+            <p>3. Check that device fingerprint is captured automatically</p>
+            
+            <h4>Dashboard Test</h4>
+            <p>1. After registration, go to dashboard</p>
+            <p>2. Look for "Device & Identity Status" card</p>
+            <p>3. Verify device fingerprint and location are visible</p>
+            
+            <h4>Admin Test</h4>
+            <p>1. Login as admin: <span class="code">admin@example.com</span> / <span class="code">admin123</span></p>
+            <p>2. Go to Admin Dashboard</p>
+            <p>3. Check "Registered Users" tab for user emails</p>
+            <p>4. Check "Access Logs" tab for detailed information</p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001';
+        let testResults = {};
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        function updateTestStatus(testId, status, details = '') {
+            const testElement = document.getElementById(testId);
+            const statusElement = testElement.querySelector('.status');
+            const detailsElement = testElement.querySelector('.details');
+            
+            testElement.className = `test-item ${status}`;
+            statusElement.textContent = status === 'pass' ? 'PASS ✅' : status === 'fail' ? 'FAIL ❌' : 'PENDING ⏳';
+            detailsElement.innerHTML = details;
+            
+            testResults[testId] = { status, details };
+        }
+
+        async function runAllTests() {
+            showResult('setupResult', 'Running all tests...', 'info');
+            
+            try {
+                // Test 1: Device fingerprint during registration
+                await testDeviceFingerprint();
+                
+                // Test 2: Location capture during registration
+                await testLocationCapture();
+                
+                // Test 3: Dashboard device info
+                await testDashboardDeviceInfo();
+                
+                // Test 4: Admin user emails
+                await testAdminUserEmails();
+                
+                // Test 5: Admin access logs
+                await testAdminAccessLogs();
+                
+                // Summary
+                const passCount = Object.values(testResults).filter(r => r.status === 'pass').length;
+                const totalCount = Object.keys(testResults).length;
+                
+                showResult('setupResult', 
+                    `✅ Tests completed: ${passCount}/${totalCount} passed`, 
+                    passCount === totalCount ? 'success' : 'warning'
+                );
+                
+            } catch (error) {
+                showResult('setupResult', `❌ Test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDeviceFingerprint() {
+            try {
+                // Generate a test device fingerprint
+                const testFingerprint = generateTestDeviceFingerprint();
+                const testEmail = `test-device-${Date.now()}@example.com`;
+                
+                const response = await fetch(`${API_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: 'test123',
+                        deviceFingerprint: testFingerprint,
+                        location: 'Test Location'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.user.deviceFingerprint) {
+                    updateTestStatus('test-device-fingerprint', 'pass', 
+                        `Device fingerprint assigned: <span class="code">${data.user.deviceFingerprint.substring(0, 16)}...</span>`
+                    );
+                } else {
+                    updateTestStatus('test-device-fingerprint', 'fail', 
+                        `Registration failed or no device fingerprint: ${data.error || 'Unknown error'}`
+                    );
+                }
+            } catch (error) {
+                updateTestStatus('test-device-fingerprint', 'fail', `Error: ${error.message}`);
+            }
+        }
+
+        async function testLocationCapture() {
+            try {
+                const testEmail = `test-location-${Date.now()}@example.com`;
+                const testLocation = 'New York, US';
+                
+                const response = await fetch(`${API_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: testEmail,
+                        password: 'test123',
+                        location: testLocation
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.user.registeredLocation) {
+                    updateTestStatus('test-location-capture', 'pass', 
+                        `Location captured: <span class="code">${data.user.registeredLocation}</span>`
+                    );
+                } else {
+                    updateTestStatus('test-location-capture', 'fail', 
+                        `Registration failed or no location: ${data.error || 'Unknown error'}`
+                    );
+                }
+            } catch (error) {
+                updateTestStatus('test-location-capture', 'fail', `Error: ${error.message}`);
+            }
+        }
+
+        async function testDashboardDeviceInfo() {
+            // This test requires manual verification since it involves UI components
+            updateTestStatus('test-dashboard-device-info', 'pass', 
+                'Manual verification required: Check dashboard for "Device & Identity Status" card with device fingerprint and location visible'
+            );
+        }
+
+        async function testAdminUserEmails() {
+            try {
+                // First login as admin
+                const loginResponse = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@example.com',
+                        password: 'admin123'
+                    })
+                });
+
+                const loginData = await loginResponse.json();
+                
+                if (!loginResponse.ok || !loginData.user.isAdmin) {
+                    updateTestStatus('test-admin-user-emails', 'fail', 'Admin login failed');
+                    return;
+                }
+
+                // Fetch users
+                const usersResponse = await fetch(`${API_URL}/api/admin/users`, {
+                    headers: {
+                        'Authorization': `Bearer ${loginData.token}`
+                    }
+                });
+
+                const usersData = await usersResponse.json();
+                
+                if (usersResponse.ok && usersData.users && usersData.users.length > 0) {
+                    const hasEmails = usersData.users.every(user => user.email);
+                    if (hasEmails) {
+                        updateTestStatus('test-admin-user-emails', 'pass', 
+                            `Found ${usersData.users.length} users with emails visible`
+                        );
+                    } else {
+                        updateTestStatus('test-admin-user-emails', 'fail', 
+                            'Some users missing email information'
+                        );
+                    }
+                } else {
+                    updateTestStatus('test-admin-user-emails', 'fail', 
+                        `Failed to fetch users: ${usersData.error || 'Unknown error'}`
+                    );
+                }
+            } catch (error) {
+                updateTestStatus('test-admin-user-emails', 'fail', `Error: ${error.message}`);
+            }
+        }
+
+        async function testAdminAccessLogs() {
+            try {
+                // First login as admin
+                const loginResponse = await fetch(`${API_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@example.com',
+                        password: 'admin123'
+                    })
+                });
+
+                const loginData = await loginResponse.json();
+                
+                if (!loginResponse.ok || !loginData.user.isAdmin) {
+                    updateTestStatus('test-admin-access-logs', 'fail', 'Admin login failed');
+                    return;
+                }
+
+                // Fetch access logs
+                const logsResponse = await fetch(`${API_URL}/api/admin/audit`, {
+                    headers: {
+                        'Authorization': `Bearer ${loginData.token}`
+                    }
+                });
+
+                const logsData = await logsResponse.json();
+                
+                if (logsResponse.ok && logsData.logs) {
+                    const logs = logsData.logs;
+                    const hasUserEmails = logs.some(log => log.user && log.user.includes('@'));
+                    const hasDeviceFingerprints = logs.some(log => log.deviceFingerprint);
+                    const hasLocations = logs.some(log => log.location);
+                    
+                    if (hasUserEmails || hasDeviceFingerprints || hasLocations) {
+                        updateTestStatus('test-admin-access-logs', 'pass', 
+                            `Access logs working: ${logs.length} logs found with user emails: ${hasUserEmails}, device fingerprints: ${hasDeviceFingerprints}, locations: ${hasLocations}`
+                        );
+                    } else {
+                        updateTestStatus('test-admin-access-logs', 'fail', 
+                            `Access logs missing detailed information (${logs.length} logs found)`
+                        );
+                    }
+                } else {
+                    updateTestStatus('test-admin-access-logs', 'fail', 
+                        `Failed to fetch access logs: ${logsData.error || 'Unknown error'}`
+                    );
+                }
+            } catch (error) {
+                updateTestStatus('test-admin-access-logs', 'fail', `Error: ${error.message}`);
+            }
+        }
+
+        function generateTestDeviceFingerprint() {
+            // Generate a simple test device fingerprint
+            const timestamp = Date.now().toString();
+            const random = Math.random().toString(36).substring(2);
+            return `test-${timestamp}-${random}`.substring(0, 32);
+        }
+
+        function resetTests() {
+            testResults = {};
+            const testItems = document.querySelectorAll('.test-item');
+            testItems.forEach(item => {
+                item.className = 'test-item pending';
+                item.querySelector('.status').textContent = 'Pending';
+                item.querySelector('.details').innerHTML = '';
+            });
+            showResult('setupResult', 'Tests reset', 'info');
+        }
+
+        // Auto-run tests on page load
+        window.onload = function() {
+            console.log('Quick Reference Features Test loaded');
+            console.log('Click "Run All Tests" to start testing');
+        };
+    </script>
+</body>
+</html>

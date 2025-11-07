@@ -1,0 +1,144 @@
+// Device fingerprinting utility
+export const generateDeviceFingerprint = (): string => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Canvas fingerprinting
+  if (ctx) {
+    ctx.textBaseline = 'top';
+    ctx.font = '14px Arial';
+    ctx.fillText('Device fingerprint', 2, 2);
+  }
+  const canvasFingerprint = canvas.toDataURL();
+
+  // Screen information
+  const screen = {
+    width: window.screen.width,
+    height: window.screen.height,
+    colorDepth: window.screen.colorDepth,
+    pixelDepth: window.screen.pixelDepth
+  };
+
+  // Navigator information
+  const navigator = {
+    userAgent: window.navigator.userAgent,
+    language: window.navigator.language,
+    platform: window.navigator.platform,
+    cookieEnabled: window.navigator.cookieEnabled,
+    doNotTrack: window.navigator.doNotTrack,
+    hardwareConcurrency: window.navigator.hardwareConcurrency || 0
+  };
+
+  // Timezone
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Combine all fingerprint data
+  const fingerprintData = {
+    canvas: canvasFingerprint.slice(-50), // Last 50 chars to reduce size
+    screen,
+    navigator,
+    timezone,
+    timestamp: Date.now()
+  };
+
+  // Generate hash-like fingerprint
+  const fingerprint = btoa(JSON.stringify(fingerprintData))
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .slice(0, 32);
+
+  return fingerprint;
+};
+
+export const getGPSLocation = async (): Promise<string | null> => {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      console.warn('Geolocation is not supported by this browser');
+      resolve(null);
+      return;
+    }
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000, // 10 seconds timeout
+      maximumAge: 300000 // 5 minutes cache
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          
+          // Use reverse geocoding to get readable location
+          const response = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            const location = `${data.city || data.locality || 'Unknown City'}, ${data.countryName || 'Unknown Country'}`;
+            console.log('GPS location detected:', location);
+            resolve(location);
+          } else {
+            // Fallback to coordinates if reverse geocoding fails
+            resolve(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
+          }
+        } catch (error) {
+          console.warn('Reverse geocoding failed:', error);
+          // Fallback to coordinates
+          const { latitude, longitude } = position.coords;
+          resolve(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
+        }
+      },
+      (error) => {
+        console.warn('GPS location access denied or failed:', error.message);
+        resolve(null);
+      },
+      options
+    );
+  });
+};
+
+export const getLocationInfo = async (): Promise<string | null> => {
+  // Try GPS first
+  const gpsLocation = await getGPSLocation();
+  if (gpsLocation) {
+    return gpsLocation;
+  }
+
+  // Fallback to IP-based location (simplified)
+  try {
+    const response = await fetch('https://ipapi.co/json/');
+    const data = await response.json();
+    
+    if (data.city && data.country) {
+      return `${data.city}, ${data.country}`;
+    }
+  } catch (error) {
+    console.warn('IP-based location detection failed:', error);
+  }
+  
+  return null;
+};
+
+export const getDeviceContext = async () => {
+  const fingerprint = generateDeviceFingerprint();
+  const location = await getLocationInfo();
+  
+  return {
+    fingerprint,
+    location: location || 'Location Not Provided',
+    userAgent: navigator.userAgent,
+    timestamp: new Date().toISOString(),
+    // Additional client info for enhanced fingerprinting
+    clientInfo: {
+      screenResolution: `${screen.width}x${screen.height}`,
+      colorDepth: screen.colorDepth,
+      pixelRatio: window.devicePixelRatio,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      platform: navigator.platform,
+      language: navigator.language,
+      cookieEnabled: navigator.cookieEnabled,
+      doNotTrack: navigator.doNotTrack || 'unspecified'
+    }
+  };
+};

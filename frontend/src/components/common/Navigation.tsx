@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LogOut, Shield, Users, FileText, BarChart3 } from 'lucide-react';
+import { LogOut, Shield, Users, FileText, BarChart3, Info, MessageSquare, Key } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Navigation: React.FC = () => {
@@ -59,6 +59,42 @@ const Navigation: React.FC = () => {
             >
               <FileText size={16} style={{ marginRight: 'var(--space-1)', display: 'inline' }} />
               Files
+            </Link>
+            <Link
+              to="/about"
+              style={{
+                color: isActive('/about') ? 'var(--color-brand)' : 'var(--color-gray-600)',
+                textDecoration: 'none',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)'
+              }}
+            >
+              <Info size={16} style={{ marginRight: 'var(--space-1)', display: 'inline' }} />
+              About
+            </Link>
+            <Link
+              to="/zk-auth"
+              style={{
+                color: isActive('/zk-auth') ? 'var(--color-brand)' : 'var(--color-gray-600)',
+                textDecoration: 'none',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)'
+              }}
+            >
+              <Key size={16} style={{ marginRight: 'var(--space-1)', display: 'inline' }} />
+              ZK-Auth
+            </Link>
+            <Link
+              to="/feedback"
+              style={{
+                color: isActive('/feedback') ? 'var(--color-brand)' : 'var(--color-gray-600)',
+                textDecoration: 'none',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 'var(--font-medium)'
+              }}
+            >
+              <MessageSquare size={16} style={{ marginRight: 'var(--space-1)', display: 'inline' }} />
+              Feedback
             </Link>
             {isAdmin && (
               <Link

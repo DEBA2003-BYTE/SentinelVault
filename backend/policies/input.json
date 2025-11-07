@@ -1,0 +1,24 @@
+{
+  "user_id": "user123",
+  "email": "user@example.com",
+  "action": "login",
+  "endpoint": "/api/auth/login",
+  "timestamp": "2024-11-06T15:30:00Z",
+  "ip_address": "192.168.1.10",
+  "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+  "device_fingerprint": "TW96aWxsYS81LjAgKE1hY2ludG9zaDsgSW50ZWwgTWFjIE9TIFggMTBfMTVfNykgQXBwbGVXZWJLaXQvNTM3LjM2",
+  "location": {
+    "latitude": 40.7128,
+    "longitude": -74.0060,
+    "country": "US",
+    "city": "New York"
+  },
+  "asn_name": "Google LLC",
+  "mfa_verified": false,
+  "session_duration": 3600,
+  "user_age_days": 30,
+  "file_type": "pdf",
+  "data_transfer_mb": 45,
+  "actions_per_minute": 2,
+  "page_sequence": ["/dashboard", "/files", "/profile"]
+}

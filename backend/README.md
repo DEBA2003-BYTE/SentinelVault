@@ -1,13 +1,31 @@
 # Risk-Adaptive Cloud Storage Backend
 
-A secure backend API built with Bun, Express.js, and MongoDB that provides risk-based access control for cloud file storage.
+A secure, intelligent, privacy-preserving cloud storage system with dynamic risk assessment, Zero-Knowledge Proofs (ZKP), and Open Policy Agent (OPA) integration.
 
-## Features
+## 🚀 Features
 
-- **Risk-based Authentication**: Dynamic access control based on user behavior, device fingerprints, and location
-- **Secure File Storage**: AWS S3 integration with encrypted uploads and presigned download URLs
-- **Admin Dashboard**: User management, audit logs, and system monitoring
-- **Zero-trust Architecture**: Every request is evaluated for risk before granting access
+### 🧠 Dynamic Risk-Adaptive Access Control (RAdAC)
+- **Open Policy Agent (OPA)** integration for policy-as-code enforcement
+- Real-time risk assessment based on device fingerprints, location, and behavior
+- Dynamic permission adjustment based on risk scores
+- Transparent rejection reasons for denied access
+
+### 🔒 Privacy-Preserving Identity Verification
+- **Zero-Knowledge Proofs (ZKP)** for confidential identity validation
+- **Self-Sovereign Identity (SSI)** support with Decentralized Identifiers (DIDs)
+- Cryptographic proof verification without revealing sensitive data
+
+### 📦 Intelligent File Management
+- Secure file storage with AWS S3 integration
+- OPA policy enforcement for all file operations
+- ZKP-gated access for sensitive files
+- Comprehensive audit trails with rejection reasons
+
+### 🧑‍💼 Advanced Admin Control Panel
+- User management with ZKP and risk status
+- Policy editor for OPA rules
+- Detailed audit logs with OPA decisions
+- Security analytics and proof verification trends
 
 ## Tech Stack
 

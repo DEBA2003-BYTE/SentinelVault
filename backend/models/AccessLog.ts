@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IAccessLog extends Document {
   userId: mongoose.Types.ObjectId;
   fileId?: mongoose.Types.ObjectId;
-  action: 'upload' | 'download' | 'delete' | 'login' | 'register';
+  action: 'upload' | 'download' | 'delete' | 'login' | 'register' | 'verifyZKP' | 'policy_evaluation' | 'admin_block_user' | 'admin_unblock_user' | 'admin_delete_user';
   riskScore: number;
   deviceFingerprint?: string;
   ipAddress: string;
@@ -12,6 +12,8 @@ export interface IAccessLog extends Document {
   timestamp: Date;
   allowed: boolean;
   reason?: string;
+  opaDecision?: 'allow' | 'deny';
+  zkpVerified?: boolean;
 }
 
 const accessLogSchema = new Schema<IAccessLog>({
@@ -26,7 +28,7 @@ const accessLogSchema = new Schema<IAccessLog>({
   },
   action: {
     type: String,
-    enum: ['upload', 'download', 'delete', 'login', 'register'],
+    enum: ['upload', 'download', 'delete', 'login', 'register', 'verifyZKP', 'policy_evaluation', 'admin_block_user', 'admin_unblock_user', 'admin_delete_user'],
     required: true
   },
   riskScore: {
@@ -58,6 +60,14 @@ const accessLogSchema = new Schema<IAccessLog>({
   },
   reason: {
     type: String
+  },
+  opaDecision: {
+    type: String,
+    enum: ['allow', 'deny']
+  },
+  zkpVerified: {
+    type: Boolean,
+    default: false
   }
 });
 
