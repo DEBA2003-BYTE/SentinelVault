@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Info, MessageSquare, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import LocationPicker from './LocationPicker';
 
 const AuthTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'login' | 'about' | 'feedback'>('login');
@@ -80,9 +81,21 @@ const AuthTabs: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [gpsLocation, setGpsLocation] = useState<{ lat: number; lon: number } | null>(null);
+
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaUserId, setMfaUserId] = useState<string | null>(null);
+  const [mfaRiskScore, setMfaRiskScore] = useState<number>(0);
+  const [showReregisterOption, setShowReregisterOption] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!gpsLocation) {
+      setLoginError('GPS location is required. Please allow location access.');
+      return;
+    }
+    
     setLoginLoading(true);
     setLoginError('');
 
@@ -94,21 +107,210 @@ const AuthTabs: React.FC = () => {
         },
         body: JSON.stringify({
           email: loginEmail,
-          password: loginPassword
+          password: loginPassword,
+          gps: gpsLocation ? { lat: gpsLocation.lat, lon: gpsLocation.lon } : undefined,
+          location: gpsLocation ? {
+            type: 'Point',
+            coordinates: [gpsLocation.lon, gpsLocation.lat],
+            name: 'Login location'
+          } : undefined
         })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('token', data.token);
-        window.location.href = '/dashboard';
+        // Check if MFA is required
+        if (data.status === 'mfa_required') {
+          setMfaRequired(true);
+          setMfaUserId(data.userId);
+          setMfaRiskScore(data.originalRiskScore || data.risk || 0);
+          setLoginError('');
+        } else if (data.status === 'blocked') {
+          setLoginError(data.message || 'Your account has been blocked. Please contact the administrator.');
+        } else {
+          // Normal login success
+          localStorage.setItem('token', data.token);
+          window.location.href = '/dashboard';
+        }
       } else {
-        setLoginError(data.error || 'Login failed');
+        if (data.status === 'blocked') {
+          setLoginError(data.message || 'Your account has been blocked. Please contact the administrator.');
+        } else {
+          setLoginError(data.error || 'Login failed');
+        }
       }
     } catch (err) {
       setLoginError('Network error. Please try again.');
     } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleMfaVerification = async () => {
+    if (!mfaUserId) return;
+
+    setLoginLoading(true);
+    setLoginError('');
+
+    try {
+      // Check if WebAuthn is supported
+      if (!window.PublicKeyCredential) {
+        setLoginError('Biometric authentication is not supported on this browser. Please use Chrome, Edge, Safari, or Firefox.');
+        setLoginLoading(false);
+        return;
+      }
+
+      // Request biometric authentication using WebAuthn
+      const publicKeyCredentialRequestOptions: PublicKeyCredentialRequestOptions = {
+        challenge: new Uint8Array(32), // In production, get this from server
+        timeout: 60000,
+        userVerification: 'required', // Require biometric verification
+        rpId: window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname
+      };
+
+      let credential;
+      try {
+        credential = await navigator.credentials.get({
+          publicKey: publicKeyCredentialRequestOptions
+        }) as PublicKeyCredential;
+      } catch (webauthnError: any) {
+        console.error('WebAuthn error:', webauthnError);
+        if (webauthnError.name === 'NotAllowedError') {
+          setLoginError('Biometric authentication was cancelled or failed. You can re-register your fingerprint below.');
+          setShowReregisterOption(true);
+        } else if (webauthnError.name === 'NotSupportedError') {
+          setLoginError('Your device does not support biometric authentication.');
+        } else {
+          setLoginError('Biometric authentication failed. You can re-register your fingerprint below.');
+          setShowReregisterOption(true);
+        }
+        setLoginLoading(false);
+        return;
+      }
+
+      if (!credential) {
+        setLoginError('Biometric authentication failed. Please try again.');
+        setLoginLoading(false);
+        return;
+      }
+
+      // Generate device fingerprint for additional verification
+      const userAgent = navigator.userAgent;
+      const language = navigator.language;
+      const platform = navigator.platform;
+      const deviceString = `${userAgent}-${language}-${platform}`;
+      const deviceFingerprint = btoa(deviceString).replace(/[^a-zA-Z0-9]/g, '').substring(0, 32);
+
+      // Biometric verification successful - the fact that we got here means the user's 
+      // fingerprint/face was verified by the device's secure enclave
+      console.log('✅ Biometric verification successful, credential ID:', credential.id);
+
+      // Send verification to backend
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/verify-mfa`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: mfaUserId,
+          deviceFingerprint,
+          biometricVerified: true,
+          credentialId: credential.id,
+          originalRiskScore: mfaRiskScore, // Send original risk score for logging
+          location: gpsLocation ? {
+            type: 'Point',
+            coordinates: [gpsLocation.lon, gpsLocation.lat],
+            name: 'MFA verification location'
+          } : undefined
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === 'ok') {
+        localStorage.setItem('token', data.token);
+        window.location.href = '/dashboard';
+      } else {
+        setLoginError(data.error || data.message || 'MFA verification failed');
+        setMfaRequired(false);
+        setMfaUserId(null);
+      }
+    } catch (err) {
+      console.error('MFA verification error:', err);
+      setLoginError('Network error during MFA verification. Please try again.');
+      setMfaRequired(false);
+      setMfaUserId(null);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleReregisterFingerprint = async () => {
+    if (!mfaUserId) return;
+
+    setLoginLoading(true);
+    setLoginError('');
+
+    try {
+      // Check if WebAuthn is supported
+      if (!window.PublicKeyCredential) {
+        setLoginError('Biometric authentication is not supported on this browser.');
+        setLoginLoading(false);
+        return;
+      }
+
+      // Create new WebAuthn credential
+      const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
+        challenge: new Uint8Array(32),
+        rp: {
+          name: 'SentinelVault',
+          id: window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname
+        },
+        user: {
+          id: new Uint8Array(16),
+          name: loginEmail,
+          displayName: loginEmail
+        },
+        pubKeyCredParams: [
+          { alg: -7, type: 'public-key' },  // ES256
+          { alg: -257, type: 'public-key' } // RS256
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required'
+        },
+        timeout: 60000
+      };
+
+      let credential;
+      try {
+        credential = await navigator.credentials.create({
+          publicKey: publicKeyCredentialCreationOptions
+        }) as PublicKeyCredential;
+      } catch (error: any) {
+        console.error('WebAuthn registration error:', error);
+        setLoginError('Failed to register fingerprint. Please try again or contact support.');
+        setLoginLoading(false);
+        return;
+      }
+
+      if (!credential) {
+        setLoginError('Failed to register fingerprint. Please try again.');
+        setLoginLoading(false);
+        return;
+      }
+
+      // After successful registration, try MFA verification again
+      setLoginError('');
+      setShowReregisterOption(false);
+      
+      // Automatically trigger verification after re-registration
+      await handleMfaVerification();
+      
+    } catch (error) {
+      console.error('Re-registration error:', error);
+      setLoginError('Failed to re-register fingerprint. Please try again.');
       setLoginLoading(false);
     }
   };
@@ -243,7 +445,166 @@ const AuthTabs: React.FC = () => {
                 </div>
               )}
 
-              <form onSubmit={handleLoginSubmit}>
+              {/* MFA Required Screen */}
+              {mfaRequired ? (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto var(--space-4)',
+                    boxShadow: '0 10px 25px -5px rgba(245, 158, 11, 0.4)'
+                  }}>
+                    <Shield size={40} style={{ color: 'white' }} />
+                  </div>
+                  <h2 style={{ 
+                    fontSize: '1.5rem',
+                    fontWeight: 'var(--font-bold)',
+                    marginBottom: 'var(--space-2)',
+                    color: '#f59e0b'
+                  }}>
+                    Biometric Verification Required
+                  </h2>
+                  <p style={{ 
+                    color: 'var(--color-gray-600)',
+                    marginBottom: 'var(--space-4)',
+                    lineHeight: '1.6'
+                  }}>
+                    Your login attempt has a risk score of <strong>{mfaRiskScore}</strong>. 
+                    Please verify your identity using biometric authentication.
+                  </p>
+                  <div style={{
+                    padding: 'var(--space-4)',
+                    background: '#fef3c7',
+                    border: '1px solid #fbbf24',
+                    borderRadius: 'var(--radius-md)',
+                    marginBottom: 'var(--space-6)',
+                    textAlign: 'left'
+                  }}>
+                    <p style={{ 
+                      fontSize: 'var(--text-sm)',
+                      color: '#92400e',
+                      marginBottom: 'var(--space-2)'
+                    }}>
+                      <strong>👆 Biometric Authentication</strong>
+                    </p>
+                    <p style={{ 
+                      fontSize: 'var(--text-xs)',
+                      color: '#78350f',
+                      lineHeight: '1.5',
+                      marginBottom: 'var(--space-2)'
+                    }}>
+                      Use your fingerprint sensor, Face ID, Touch ID, or Windows Hello to verify your identity.
+                    </p>
+                    <p style={{ 
+                      fontSize: 'var(--text-xs)',
+                      color: '#78350f',
+                      lineHeight: '1.5'
+                    }}>
+                      Click the button below and follow your device's biometric authentication prompt.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleMfaVerification}
+                    className="btn btn-primary"
+                    style={{ 
+                      width: '100%',
+                      marginBottom: 'var(--space-3)',
+                      padding: 'var(--space-3) var(--space-6)',
+                      fontSize: 'var(--text-base)',
+                      fontWeight: 'var(--font-semibold)'
+                    }}
+                    disabled={loginLoading}
+                  >
+                    {loginLoading ? (
+                      <>
+                        <div className="spinner" />
+                        Verifying Biometrics...
+                      </>
+                    ) : (
+                      <>
+                        👆 Use Fingerprint / Face ID
+                      </>
+                    )}
+                  </button>
+                  
+                  <div style={{ 
+                    textAlign: 'center', 
+                    margin: 'var(--space-3) 0',
+                    color: 'var(--color-gray-600)',
+                    fontSize: 'var(--text-sm)'
+                  }}>
+                    or
+                  </div>
+                  
+                  {showReregisterOption && (
+                    <button
+                      onClick={handleReregisterFingerprint}
+                      className="btn btn-warning"
+                      style={{ 
+                        width: '100%',
+                        marginBottom: 'var(--space-3)',
+                        backgroundColor: '#f59e0b',
+                        color: 'white'
+                      }}
+                      disabled={loginLoading}
+                    >
+                      🔄 Re-register Fingerprint
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => {
+                      setMfaRequired(false);
+                      setMfaUserId(null);
+                      setLoginEmail('');
+                      setLoginPassword('');
+                    }}
+                    className="btn btn-secondary"
+                    style={{ width: '100%' }}
+                    disabled={loginLoading}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* GPS Location Detection - Required for login */}
+                  <LocationPicker
+                    onLocationChange={(location) => {
+                      console.log('AuthTabs: Location changed:', location);
+                      if (location) {
+                        const gps = { lat: location.lat, lon: location.lon };
+                        setGpsLocation(gps);
+                        console.log('AuthTabs: GPS state set to:', gps);
+                      } else {
+                        setGpsLocation(null);
+                        console.log('AuthTabs: GPS state cleared');
+                      }
+                    }}
+                    required={true}
+                  />
+                  
+                  {/* Debug: Show GPS state */}
+                  {gpsLocation && (
+                    <div style={{
+                      padding: 'var(--space-2)',
+                      background: '#e0f2fe',
+                      border: '1px solid #0284c7',
+                      borderRadius: 'var(--radius-sm)',
+                      marginBottom: 'var(--space-4)',
+                      fontSize: 'var(--text-xs)',
+                      color: '#0c4a6e'
+                    }}>
+                      ✓ GPS Ready: {gpsLocation.lat.toFixed(4)}, {gpsLocation.lon.toFixed(4)}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleLoginSubmit}>
                 <div className="form-group">
                   <label htmlFor="login-email" className="form-label">Email</label>
                   <input
@@ -278,23 +639,27 @@ const AuthTabs: React.FC = () => {
                     marginBottom: 'var(--space-4)',
                     padding: 'var(--space-3) var(--space-6)'
                   }}
-                  disabled={loginLoading}
+                  disabled={loginLoading || !gpsLocation}
                 >
                   {loginLoading ? (
                     <>
                       <div className="spinner" />
                       Signing in...
                     </>
+                  ) : !gpsLocation ? (
+                    'Waiting for GPS Location...'
                   ) : (
                     'Sign In'
                   )}
                 </button>
-              </form>
 
-              <div style={{ textAlign: 'center' }}>
-                <span style={{ color: 'var(--color-gray-600)' }}>Don't have an account? </span>
-                <Link to="/register">Create one</Link>
-              </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <span style={{ color: 'var(--color-gray-600)' }}>Don't have an account? </span>
+                      <Link to="/register">Create one</Link>
+                    </div>
+                  </form>
+                </>
+              )}
             </div>
           )}
 

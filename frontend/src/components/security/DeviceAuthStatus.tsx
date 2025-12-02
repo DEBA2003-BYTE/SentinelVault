@@ -78,7 +78,11 @@ const DeviceAuthStatus: React.FC<DeviceAuthStatusProps> = ({
               <MapPin className="w-4 h-4" />
               <div>
                 <span className="label">Location:</span>
-                <span className="value">{currentDevice.location}</span>
+                <span className="value">
+                  {typeof currentDevice.location === 'string' 
+                    ? currentDevice.location 
+                    : currentDevice.location.name || 'Unknown'}
+                </span>
               </div>
             </div>
           )}

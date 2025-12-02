@@ -3,17 +3,26 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IAccessLog extends Document {
   userId: mongoose.Types.ObjectId;
   fileId?: mongoose.Types.ObjectId;
-  action: 'upload' | 'download' | 'delete' | 'login' | 'register' | 'verifyZKP' | 'policy_evaluation' | 'admin_block_user' | 'admin_unblock_user' | 'admin_delete_user';
+  action: 'upload' | 'download' | 'delete' | 'login' | 'register' | 'verifyZKP' | 'policy_evaluation' | 'admin_block_user' | 'admin_unblock_user' | 'admin_delete_user' | 'share';
   riskScore: number;
-  deviceFingerprint?: string;
-  ipAddress: string;
-  location?: string;
-  userAgent?: string;
+  location?: {
+    type: string;
+    coordinates: [number, number];
+    name?: string;
+  };
   timestamp: Date;
   allowed: boolean;
   reason?: string;
   opaDecision?: 'allow' | 'deny';
   zkpVerified?: boolean;
+  userEmail?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  riskAssessment?: {
+    policy_results?: Record<string, any>;
+    weighted_scores?: Record<string, number>;
+    details?: Record<string, any>;
+  };
 }
 
 const accessLogSchema = new Schema<IAccessLog>({
@@ -28,7 +37,7 @@ const accessLogSchema = new Schema<IAccessLog>({
   },
   action: {
     type: String,
-    enum: ['upload', 'download', 'delete', 'login', 'register', 'verifyZKP', 'policy_evaluation', 'admin_block_user', 'admin_unblock_user', 'admin_delete_user'],
+    enum: ['upload', 'download', 'delete', 'login', 'register', 'verifyZKP', 'policy_evaluation', 'admin_block_user', 'admin_unblock_user', 'admin_delete_user', 'share'],
     required: true
   },
   riskScore: {
@@ -37,18 +46,17 @@ const accessLogSchema = new Schema<IAccessLog>({
     min: 0,
     max: 100
   },
-  deviceFingerprint: {
-    type: String
-  },
-  ipAddress: {
-    type: String,
-    required: true
-  },
   location: {
-    type: String
-  },
-  userAgent: {
-    type: String
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      required: false
+    },
+    name: String
   },
   timestamp: {
     type: Date,
@@ -68,6 +76,13 @@ const accessLogSchema = new Schema<IAccessLog>({
   zkpVerified: {
     type: Boolean,
     default: false
+  },
+  userEmail: {
+    type: String
+  },
+  riskAssessment: {
+    type: Schema.Types.Mixed,
+    required: false
   }
 });
 

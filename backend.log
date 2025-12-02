@@ -2,250 +2,397 @@
 > start
 > bun index.ts
 
-Attempting MongoDB connection (1/3)...
 NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
  SDK releases are limited to address critical bug fixes and security issues only.
 
 Please migrate your code to use AWS SDK for JavaScript (v3).
 For more information, check the blog post at https://a.co/cUPnyil
-      at emitWarning (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/aws-sdk/lib/maintenance_mode_message.js:38:13)
-      at <anonymous> (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/aws-sdk/lib/maintenance_mode_message.js:46:5)
+      at emitWarning (/Users/debarghyapramanik/Desktop Backup/Sentinel Vault/backend/node_modules/aws-sdk/lib/maintenance_mode_message.js:38:13)
+      at <anonymous> (/Users/debarghyapramanik/Desktop Backup/Sentinel Vault/backend/node_modules/aws-sdk/lib/maintenance_mode_message.js:46:5)
 
+⚠️  Skipping policy data load - MongoDB not connected
+Attempting MongoDB connection (1/3)...
 Server running on port 3001
 ✅ Connected to MongoDB successfully
 ✅ MongoDB ping successful
 🔄 Initializing OPA policies...
 ⚠️  OPA initialization failed - continuing without policy enforcement
 💡 To enable OPA: docker run -p 8181:8181 openpolicyagent/opa:latest run --server
-Error loading policy data: error: Unable to connect. Is the computer able to access the url?
-  path: "http://localhost:8181/v1/data",
+Login request body: {
+  email: "dd@gmail.com",
+  password: "dddddddd",
+  gps: {
+    lat: 13.326234810352867,
+    lon: 77.1285934407303,
+  },
+  location: {
+    type: "Point",
+    coordinates: [ 77.1285934407303, 13.326234810352867 ],
+    name: "Login location",
+  },
+}
+Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
+Using device fingerprint and location for login: {
+  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
+  location: "Login location",
+}
+[RBA] User dd@gmail.com has 4 failed attempts in last hour
+[RBA] Calling OPA with input: {
+  "failed_count": 4,
+  "gps": {
+    "lat": 13.326234810352867,
+    "lon": 77.1285934407303
+  },
+  "keystroke_sample": {},
+  "timestamp": "2025-12-02T17:26:10.901Z",
+  "device_id": null,
+  "user": {
+    "keystroke_baseline": {
+      "meanIKI": 0,
+      "stdIKI": 0,
+      "samples": 0
+    },
+    "location_history": [],
+    "known_devices": [],
+    "activity_hours": {
+      "start": 8,
+      "end": 20,
+      "tz": "Asia/Kolkata"
+    },
+    "last_login_details": {
+      "gps": {}
+    }
+  }
+}
+[RBA] OPA error, using fallback scoring: warn: Unable to connect. Is the computer able to access the url?
+  path: "http://localhost:8181/v1/data/rba_scoring",
  errno: 0,
   code: "ConnectionRefused"
 
 
-Login request body: {
-  email: "admin@gmail.com",
-  password: "Debarghya",
+[RBA] Fallback scoring result: {
+  riskScore: 62,
+  breakdown: {
+    failedAttempts: 40,
+    gps: 12,
+    typing: 2,
+    timeOfDay: 8,
+    velocity: 0,
+    newDevice: 0,
+    otherTotal: 22,
+  },
 }
-Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
-Using device fingerprint and location for login: {
-  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
-  location: "Location Not Provided",
+🔐 === MFA VERIFICATION STARTED ===
+Request body: {
+  "userId": "692f1fd7f982ed59fe00888b",
+  "deviceFingerprint": "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
+  "biometricVerified": true,
+  "credentialId": "bv5yDstY713wlJrSf9iTFGH9BVU",
+  "location": {
+    "type": "Point",
+    "coordinates": [
+      77.1285934407303,
+      13.326234810352867
+    ],
+    "name": "MFA verification location"
+  }
 }
-Login request body: {
-  email: "admin@gmail.com",
-  password: "Debarghya",
+🔐 MFA Verification Request: {
+  userId: "692f1fd7f982ed59fe00888b",
+  biometricVerified: true,
+  hasCredentialId: true,
+  hasLocation: true,
 }
-Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
-Using device fingerprint and location for login: {
-  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
-  location: "Location Not Provided",
+👤 User found: dd@gmail.com
+✅ Biometric MFA successful for user: dd@gmail.com
+   Credential ID: bv5yDstY713wlJrSf9iTFGH9BVU
+   Device verified biometric - granting access
+✅ MFA verification complete, sending response
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Login request body: {
-  email: "admin@gmail.com",
-  password: "Debarghya",
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
-Using device fingerprint and location for login: {
-  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
-  location: "Location Not Provided",
-}
-Device Authentication Check: {
-  email: "admin@gmail.com",
-  isAdmin: true,
-  registeredDevice: "admin-device-def",
-  currentDevice: "unknown",
-  isRecognized: true,
-  deviceRiskScore: 0,
-  riskFactors: [],
-}
-Block/unblock user request: {
-  userId: "690c73dd5b870e6bfe330cd3",
-  blocked: true,
-  adminId: "690c73dc5b870e6bfe330cd0",
-}
-Found user: {
-  email: "test@example.com",
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
   isAdmin: false,
-  currentlyBlocked: false,
 }
-User status updated: {
-  email: "test@example.com",
-  isBlocked: true,
-}
-Block/unblock user request: {
-  userId: "690c73dd5b870e6bfe330cd3",
-  blocked: false,
-  adminId: "690c73dc5b870e6bfe330cd0",
-}
-Found user: {
-  email: "test@example.com",
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
   isAdmin: false,
-  currentlyBlocked: true,
 }
-User status updated: {
-  email: "test@example.com",
-  isBlocked: false,
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Registration request body: {
-  email: "pritvi@gmail.com",
-  password: "pppppppp",
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Parsed registration data: {
-  email: "pritvi@gmail.com",
-  deviceFingerprint: undefined,
-  location: undefined,
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Generated device fingerprint for registration: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
-Using location for registration: Location Not Provided
-Register MFA secret error: 409 |           }
-410 |           rawValue[i] = caster.applySetters(rawValue[i], doc, init, void 0, opts);
-411 |         }
-412 |       } catch (e) {
-413 |         // rethrow
-414 |         throw new CastError('[' + e.kind + ']', util.inspect(value), this.path + '.' + i, e, this);
-                    ^
-CastError: Cast to [string] failed for value "[\n' +
-  '  {\n' +
-  "    type: 'fingerprint_hash',\n" +
-  "    secretHash: 'fp_fnh3s1qhacc',\n" +
-  '    isActive: true,\n' +
-  '    createdAt: 2025-11-06T10:26:59.841Z,\n' +
-  "    metadata: { strength: 'strong' }\n" +
-  '  }\n' +
-  ']" (type string) at path "mfaFactors.0" because of "CastError"
- stringValue: "\"[\\n' +\n  '  {\\n' +\n  \"    type: 'fingerprint_hash',\\n\" +\n  \"    secretHash: 'fp_fnh3s1qhacc',\\n\" +\n  '    isActive: true,\\n' +\n  '    createdAt: 2025-11-06T10:26:59.841Z,\\n' +\n  \"    metadata: { strength: 'strong' }\\n\" +\n  '  }\\n' +\n  ']\"",
- messageFormat: undefined,
-       kind: "[string]",
-      value: "[\n  {\n    type: 'fingerprint_hash',\n    secretHash: 'fp_fnh3s1qhacc',\n    isActive: true,\n    createdAt: 2025-11-06T10:26:59.841Z,\n    metadata: { strength: 'strong' }\n  }\n]",
-       path: "mfaFactors.0",
-  valueType: "string",
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+Login request body: {
+  email: "dd@gmail.com",
+  password: "dddddddd",
+  gps: {
+    lat: 13.326227649522373,
+    lon: 77.12867709058584,
+  },
+  location: {
+    type: "Point",
+    coordinates: [ 77.12867709058584, 13.326227649522373 ],
+    name: "Login location",
+  },
+}
+Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
+Using device fingerprint and location for login: {
+  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
+  location: "Login location",
+}
+[RBA] User dd@gmail.com has 4 failed attempts in last hour
+[RBA] Calling OPA with input: {
+  "failed_count": 4,
+  "gps": {
+    "lat": 13.326227649522373,
+    "lon": 77.12867709058584
+  },
+  "keystroke_sample": {},
+  "timestamp": "2025-12-02T17:26:49.600Z",
+  "device_id": null,
+  "user": {
+    "keystroke_baseline": {
+      "meanIKI": 0,
+      "stdIKI": 0,
+      "samples": 0
+    },
+    "location_history": [],
+    "known_devices": [],
+    "activity_hours": {
+      "start": 8,
+      "end": 20,
+      "tz": "Asia/Kolkata"
+    },
+    "last_login_details": {
+      "gps": {}
+    }
+  }
+}
+[RBA] OPA error, using fallback scoring: warn: Unable to connect. Is the computer able to access the url?
+  path: "http://localhost:8181/v1/data/rba_scoring",
+ errno: 0,
+  code: "ConnectionRefused"
 
-      at <anonymous> (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/schema/array.js:414:15)
-      at <anonymous> (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/schemaType.js:1262:12)
-      at walkUpdatePath (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/helpers/query/castUpdate.js:438:24)
-      at castUpdate (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/helpers/query/castUpdate.js:144:7)
-      at _findOneAndUpdate (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/query.js:3497:23)
-      at _findOneAndUpdate (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/query.js:3475:72)
-      at exec (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/query.js:4627:74)
 
-602 |   }
-603 | 
-604 |   try {
-605 |     return castString(value);
-606 |   } catch (error) {
-607 |     throw new CastError('string', value, this.path, null, this);
-                ^
-CastError: Cast to string failed for value "{
-  type: 'fingerprint_hash',
-  secretHash: 'fp_fnh3s1qhacc',
-  isActive: true,
-  createdAt: 2025-11-06T10:26:59.841Z,
-  metadata: { strength: 'strong' }
-}" (type Object) at path "mfaFactors"
- stringValue: "\"{\n  type: 'fingerprint_hash',\n  secretHash: 'fp_fnh3s1qhacc',\n  isActive: true,\n  createdAt: 2025-11-06T10:26:59.841Z,\n  metadata: { strength: 'strong' }\n}\"",
- messageFormat: undefined,
-       kind: "string",
-      value: {
-  type: "fingerprint_hash",
-  secretHash: "fp_fnh3s1qhacc",
-  isActive: true,
-  createdAt: 2025-11-06T10:26:59.841Z,
-  metadata: [Object ...],
-},
-       path: "mfaFactors",
-     reason: null,
-  valueType: "Object",
-
-      at <anonymous> (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/schema/string.js:607:11)
-      at <anonymous> (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/schemaType.js:1262:12)
-      at <anonymous> (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/schema/array.js:410:32)
-      at <anonymous> (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/schemaType.js:1262:12)
-      at walkUpdatePath (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/helpers/query/castUpdate.js:438:24)
-      at castUpdate (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/helpers/query/castUpdate.js:144:7)
-      at _findOneAndUpdate (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/query.js:3497:23)
-      at _findOneAndUpdate (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/query.js:3475:72)
-      at exec (/Users/debarghyapramanik/Desktop/SentinelVault/backend/node_modules/mongoose/lib/query.js:4627:74)
-
-Login request body: {
-  email: "admin@gmail.com",
-  password: "Debarghya",
+[RBA] Fallback scoring result: {
+  riskScore: 62,
+  breakdown: {
+    failedAttempts: 40,
+    gps: 12,
+    typing: 2,
+    timeOfDay: 8,
+    velocity: 0,
+    newDevice: 0,
+    otherTotal: 22,
+  },
 }
-Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
-Using device fingerprint and location for login: {
-  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
-  location: "Location Not Provided",
+🔐 === MFA VERIFICATION STARTED ===
+Request body: {
+  "userId": "692f1fd7f982ed59fe00888b",
+  "deviceFingerprint": "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
+  "biometricVerified": true,
+  "credentialId": "bv5yDstY713wlJrSf9iTFGH9BVU",
+  "location": {
+    "type": "Point",
+    "coordinates": [
+      77.12867709058584,
+      13.326227649522373
+    ],
+    "name": "MFA verification location"
+  }
 }
-Device Authentication Check: {
-  email: "admin@gmail.com",
-  isAdmin: true,
-  registeredDevice: "admin-device-def",
-  currentDevice: "unknown",
-  isRecognized: true,
-  deviceRiskScore: 0,
-  riskFactors: [],
+🔐 MFA Verification Request: {
+  userId: "692f1fd7f982ed59fe00888b",
+  biometricVerified: true,
+  hasCredentialId: true,
+  hasLocation: true,
 }
-Block/unblock user request: {
-  userId: "690c77da02c3d4ec17c25ac7",
-  blocked: true,
-  adminId: "690c73dc5b870e6bfe330cd0",
+👤 User found: dd@gmail.com
+✅ Biometric MFA successful for user: dd@gmail.com
+   Credential ID: bv5yDstY713wlJrSf9iTFGH9BVU
+   Device verified biometric - granting access
+✅ MFA verification complete, sending response
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Found user: {
-  email: "pritvi@gmail.com",
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
   isAdmin: false,
-  currentlyBlocked: false,
 }
-User status updated: {
-  email: "pritvi@gmail.com",
-  isBlocked: true,
-}
-Block/unblock user request: {
-  userId: "690c77da02c3d4ec17c25ac7",
-  blocked: false,
-  adminId: "690c73dc5b870e6bfe330cd0",
-}
-Found user: {
-  email: "pritvi@gmail.com",
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
   isAdmin: false,
-  currentlyBlocked: true,
 }
-User status updated: {
-  email: "pritvi@gmail.com",
-  isBlocked: false,
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Login request body: {
-  email: "pritvi@gmail.com",
-  password: "pppppppp",
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
-Using device fingerprint and location for login: {
-  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
-  location: "Location Not Provided",
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
 }
-Device Authentication Check: {
-  email: "pritvi@gmail.com",
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
   isAdmin: false,
-  registeredDevice: "TW96aWxsYS81LjAg",
-  currentDevice: "unknown",
-  isRecognized: true,
-  deviceRiskScore: 0,
-  riskFactors: [],
 }
-Login request body: {
-  email: "admin@gmail.com",
-  password: "Debarghya",
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
 }
-Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
-Using device fingerprint and location for login: {
-  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
-  location: "Location Not Provided",
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
 }
-Device Authentication Check: {
-  email: "admin@gmail.com",
-  isAdmin: true,
-  registeredDevice: "admin-device-def",
-  currentDevice: "unknown",
-  isRecognized: true,
-  deviceRiskScore: 0,
-  riskFactors: [],
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+Verifying token...
+Fetching user from database: {
+  userId: "692f1fd7f982ed59fe00888b",
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
+}
+User authenticated successfully: {
+  userId: "692f1fd7f982ed59fe00888b",
+  email: "dd@gmail.com",
+  isAdmin: false,
 }

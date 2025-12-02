@@ -40,10 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshDeviceContext = async () => {
     try {
       const context = await getDeviceContext();
-      setDeviceContext({
-        ...context,
-        location: context.location || undefined
-      });
+      setDeviceContext(context);
     } catch (error) {
       console.error('Failed to get device context:', error);
     }
@@ -80,12 +77,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       context = await getDeviceContext();
     }
     
+    // ENFORCE GPS REQUIREMENT (except for admin)
+    if (email !== 'admin@gmail.com' && (!context.location || !context.gps)) {
+      throw new Error('GPS location is required for login. Please allow location access and try again.');
+    }
+    
     console.log('Using device context for login:', context);
     
-    const data = await authService.login(email, password, {
-      deviceFingerprint: context.fingerprint,
-      location: context.location
-    });
+    const data = await authService.login(email, password, context);
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem('token', data.token);
@@ -110,12 +109,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       context = await getDeviceContext();
     }
     
+    // Check for pending GPS from CurrentLocation component
+    const pendingGPS = sessionStorage.getItem('pendingGPS');
+    if (pendingGPS) {
+      const gpsData = JSON.parse(pendingGPS);
+      context = {
+        ...context,
+        location: gpsData,
+        gps: { lat: gpsData.lat, lon: gpsData.lon },
+        deviceId: context.fingerprint,
+        localTimestamp: new Date().toISOString()
+      };
+    }
+    
+    // ENFORCE GPS REQUIREMENT
+    if (!context.location || !context.gps) {
+      throw new Error('GPS location is required for registration. Please allow location access and try again.');
+    }
+    
     console.log('Using device context for registration:', context);
     
-    const data = await authService.register(email, password, {
-      deviceFingerprint: context.fingerprint,
-      location: context.location
-    });
+    const data = await authService.register(email, password, context);
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem('token', data.token);

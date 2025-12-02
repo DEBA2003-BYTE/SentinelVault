@@ -60,13 +60,11 @@ router.post('/evaluate', authenticateToken, assessRisk, async (req: RiskRequest,
       userId: user.id,
       action: 'policy_evaluation',
       riskScore,
-      ipAddress: req.riskData?.ipAddress || 'unknown',
-      userAgent: req.riskData?.userAgent,
-      deviceFingerprint: req.riskData?.deviceFingerprint,
       location: req.riskData?.location,
       allowed: decision.allow,
       reason: decision.reason,
-      opaDecision: decision.allow ? 'allow' : 'deny'
+      opaDecision: decision.allow ? 'allow' : 'deny',
+      userEmail: user.email
     }).save();
 
     res.json({

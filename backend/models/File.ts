@@ -12,6 +12,8 @@ export interface IFile extends Document {
   riskLevel?: 'low' | 'medium' | 'high';
   opaDecision?: 'allow' | 'deny';
   rejectionReason?: string;
+  visibility: 'all' | 'specific' | 'none';
+  sharedWith: string[];
 }
 
 const fileSchema = new Schema<IFile>({
@@ -60,6 +62,15 @@ const fileSchema = new Schema<IFile>({
   },
   rejectionReason: {
     type: String
+  },
+  visibility: {
+    type: String,
+    enum: ['all', 'specific', 'none'],
+    default: 'none'
+  },
+  sharedWith: {
+    type: [String],
+    default: []
   }
 });
 

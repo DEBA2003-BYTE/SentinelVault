@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle, Smartphone, MapPin, Globe } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { ApiError } from '../../services/api';
+import LocationPicker from './LocationPicker';
 
 const RegisterForm: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,14 +11,26 @@ const RegisterForm: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lon: number; name: string } | null>(null);
   
   const { register, deviceContext } = useAuth();
   const navigate = useNavigate();
+
+  const handleLocationChange = (location: { lat: number; lon: number; name: string } | null) => {
+    setCurrentLocation(location);
+    console.log('Location updated:', location);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (!currentLocation) {
+      setError('GPS location is required. Please allow location access.');
+      setLoading(false);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -32,10 +45,22 @@ const RegisterForm: React.FC = () => {
     }
 
     try {
+      // Temporarily store location in sessionStorage for AuthContext to use
+      sessionStorage.setItem('pendingGPS', JSON.stringify({
+        type: 'Point',
+        coordinates: [currentLocation.lon, currentLocation.lat],
+        name: currentLocation.name,
+        lat: currentLocation.lat,
+        lon: currentLocation.lon
+      }));
+      
       await register(email, password);
+      sessionStorage.removeItem('pendingGPS');
       navigate('/dashboard');
     } catch (err) {
       if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('Registration failed. Please try again.');
@@ -94,6 +119,9 @@ const RegisterForm: React.FC = () => {
           </p>
         </div>
 
+        {/* GPS Location Requirement */}
+        <LocationPicker onLocationChange={handleLocationChange} required={true} />
+
         {error && (
           <div className="alert alert-error" style={{ marginBottom: 'var(--space-4)' }}>
             <AlertCircle size={16} style={{ marginRight: 'var(--space-2)' }} />
@@ -120,7 +148,7 @@ const RegisterForm: React.FC = () => {
                   <MapPin className="w-4 h-4" />
                   <div>
                     <span className="label">Location:</span>
-                    <span className="value">{deviceContext.location}</span>
+                    <span className="value">{deviceContext.location.name || 'Unknown'}</span>
                   </div>
                 </div>
               )}
@@ -186,13 +214,15 @@ const RegisterForm: React.FC = () => {
             type="submit"
             className="btn btn-primary"
             style={{ width: '100%', marginBottom: 'var(--space-4)' }}
-            disabled={loading}
+            disabled={loading || !currentLocation}
           >
             {loading ? (
               <>
                 <div className="spinner" />
                 Creating account...
               </>
+            ) : !currentLocation ? (
+              'Waiting for GPS Location...'
             ) : (
               'Create Account'
             )}

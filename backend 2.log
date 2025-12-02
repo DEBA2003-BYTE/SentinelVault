@@ -1,0 +1,140 @@
+
+> start
+> bun index.ts
+
+Attempting MongoDB connection (1/3)...
+NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+      at emitWarning (/Users/debarghyapramanik/Desktop/Sentinel Vault/backend/node_modules/aws-sdk/lib/maintenance_mode_message.js:38:13)
+      at <anonymous> (/Users/debarghyapramanik/Desktop/Sentinel Vault/backend/node_modules/aws-sdk/lib/maintenance_mode_message.js:46:5)
+
+Server running on port 3001
+✅ Connected to MongoDB successfully
+✅ MongoDB ping successful
+🔄 Initializing OPA policies...
+⚠️  OPA initialization failed - continuing without policy enforcement
+💡 To enable OPA: docker run -p 8181:8181 openpolicyagent/opa:latest run --server
+Error loading policy data: 175 |       const userId = user._id.toString();
+176 |       const userLogs = recentLogs.filter(log => log.userId.toString() === userId && log.allowed);
+177 | 
+178 |       if (userLogs.length > 0) {
+179 |         const hours = userLogs.map(log => new Date(log.timestamp).getHours());
+180 |         const countries = [...new Set(userLogs.map(log => log.location?.split(',').pop()?.trim()).filter(Boolean))];
+                                                                              ^
+TypeError: log.location?.split is not a function. (In 'log.location?.split(",")', 'log.location?.split' is undefined)
+      at <anonymous> (/Users/debarghyapramanik/Desktop/Sentinel Vault/backend/routes/riskEvaluation.ts:180:73)
+      at map (1:11)
+      at buildPolicyData (/Users/debarghyapramanik/Desktop/Sentinel Vault/backend/routes/riskEvaluation.ts:180:48)
+      at async loadPolicyData (/Users/debarghyapramanik/Desktop/Sentinel Vault/backend/routes/riskEvaluation.ts:89:37)
+
+Login request body: {
+  email: "dd@gmail.com",
+  password: "dddddddd",
+  gps: {
+    lat: 13.3263424846549,
+    lon: 77.12882736688894,
+  },
+  location: {
+    type: "Point",
+    coordinates: [ 77.12882736688894, 13.3263424846549 ],
+    name: "Login location",
+  },
+}
+Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
+Using device fingerprint and location for login: {
+  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
+  location: "Login location",
+}
+[RBA] User dd@gmail.com has 13 failed attempts in last hour
+[RBA] BLOCKING user dd@gmail.com due to 13 failed attempts
+Login request body: {
+  email: "admin@gmail.com",
+  password: "Debarghya",
+  gps: {
+    lat: 13.3263424846549,
+    lon: 77.12882736688894,
+  },
+  location: {
+    type: "Point",
+    coordinates: [ 77.12882736688894, 13.3263424846549 ],
+    name: "Login location",
+  },
+}
+Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
+Using device fingerprint and location for login: {
+  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
+  location: "Login location",
+}
+[RBA] User admin@gmail.com has 1 failed attempts in last hour
+Block/unblock user request: {
+  userId: "691f4bacd1d2ad35c5e51f19",
+  blocked: false,
+  adminId: "691d220dd39167db52d8f682",
+}
+Found user: {
+  email: "dd@gmail.com",
+  isAdmin: false,
+  currentlyBlocked: true,
+}
+✅ Cleared failed attempts for dd@gmail.com
+✅ RESET: Cleared 24 RiskEvent failed attempts for user dd@gmail.com - Counter now at 0
+User status updated: {
+  email: "dd@gmail.com",
+  isBlocked: false,
+}
+Login request body: {
+  email: "admin@gmail.com",
+  password: "Debarghya",
+  gps: {
+    lat: 13.326342482543303,
+    lon: 77.12882735510388,
+  },
+  location: {
+    type: "Point",
+    coordinates: [ 77.12882735510388, 13.326342482543303 ],
+    name: "Login location",
+  },
+}
+Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
+Using device fingerprint and location for login: {
+  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
+  location: "Login location",
+}
+[RBA] User admin@gmail.com has 1 failed attempts in last hour
+Login request body: {
+  email: "dd@gmail.com",
+  password: "dddddddd",
+  gps: {
+    lat: 13.326269164758065,
+    lon: 77.12868090526678,
+  },
+  location: {
+    type: "Point",
+    coordinates: [ 77.12868090526678, 13.326269164758065 ],
+    name: "Login location",
+  },
+}
+Generated device fingerprint for login: TW96aWxsYS81LjAgKE1hY2ludG9zaDsg
+Using device fingerprint and location for login: {
+  deviceFingerprint: "TW96aWxsYS81LjAgKE1hY2ludG9zaDsg",
+  location: "Login location",
+}
+[RBA] User dd@gmail.com has 0 failed attempts in last hour
+OPA error, using fallback scoring: warn: Unable to connect. Is the computer able to access the url?
+  path: "http://localhost:8181/v1/data/rba_scoring",
+ errno: 0,
+  code: "ConnectionRefused"
+
+
+Device Authentication Check: {
+  email: "dd@gmail.com",
+  isAdmin: false,
+  registeredDevice: "TW96aWxsYS81LjAg",
+  currentDevice: "unknown",
+  isRecognized: true,
+  deviceRiskScore: 0,
+  riskFactors: [],
+}

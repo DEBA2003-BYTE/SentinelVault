@@ -60,8 +60,37 @@ export class OPAService {
     risk_level: string;
     reasons: string[];
     suggested_action: string;
+    policy_results?: Record<string, any>;
+    weighted_scores?: Record<string, number>;
+    details?: Record<string, any>;
   }> {
     try {
+      // Try to get detailed risk aggregation first
+      const aggregationResponse = await fetch(`${this.opaUrl}/v1/data/risk_aggregation/decision`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input }),
+      });
+
+      if (aggregationResponse.ok) {
+        const aggregationData = await aggregationResponse.json();
+        if (aggregationData.result) {
+          return {
+            allow: aggregationData.result.allow,
+            risk_score: aggregationData.result.risk_score || aggregationData.result.final_risk_score || 0,
+            risk_level: aggregationData.result.risk_score > 70 ? 'high' : aggregationData.result.risk_score > 30 ? 'medium' : 'low',
+            reasons: [aggregationData.result.reason] || [],
+            suggested_action: aggregationData.result.action || 'allow',
+            policy_results: aggregationData.result.policy_results,
+            weighted_scores: aggregationData.result.weighted_scores,
+            details: aggregationData.result.details
+          };
+        }
+      }
+
+      // Fallback to basic risk assessment
       const response = await fetch(`${this.opaUrl}/v1/data/risk_assessment`, {
         method: 'POST',
         headers: {

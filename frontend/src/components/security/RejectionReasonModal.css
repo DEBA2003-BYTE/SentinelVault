@@ -1,0 +1,229 @@
+.rejection-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.rejection-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+.rejection-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.rejection-modal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rejection-modal-title h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  color: var(--color-error);
+}
+
+.rejection-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: 6px;
+  color: var(--color-gray-500);
+  transition: all 0.2s;
+}
+
+.rejection-modal-close:hover {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-gray-700);
+}
+
+.rejection-modal-body {
+  padding: var(--space-6);
+}
+
+.rejection-reason-main {
+  background-color: #fee2e2;
+  border-left: 4px solid var(--color-error);
+  padding: var(--space-4);
+  border-radius: 6px;
+  margin-bottom: var(--space-6);
+}
+
+.rejection-reason-main p {
+  margin: 0;
+  color: #991b1b;
+  font-weight: 500;
+}
+
+.rejection-detail-item {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background-color: var(--color-bg-secondary);
+  border-radius: 8px;
+  margin-bottom: var(--space-3);
+}
+
+.rejection-detail-item svg {
+  flex-shrink: 0;
+  color: var(--color-gray-500);
+  margin-top: 2px;
+}
+
+.rejection-detail-item > div {
+  flex: 1;
+}
+
+.detail-label {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  margin-bottom: var(--space-1);
+}
+
+.detail-value {
+  display: block;
+  font-size: var(--text-base);
+  color: var(--color-gray-900);
+  font-weight: 500;
+}
+
+.detail-value.risk-score {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.detail-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detail-comparison > div {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.comparison-label {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  min-width: 80px;
+}
+
+.comparison-value {
+  font-size: var(--text-sm);
+  color: var(--color-gray-900);
+}
+
+.font-mono {
+  font-family: 'Courier New', monospace;
+}
+
+.match-status {
+  margin-top: var(--space-2);
+}
+
+.match-yes {
+  color: var(--color-success);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.match-no {
+  color: var(--color-error);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.rejection-policy-info {
+  background-color: #dbeafe;
+  border-left: 4px solid #3b82f6;
+  padding: var(--space-4);
+  border-radius: 6px;
+  margin-top: var(--space-4);
+}
+
+.rejection-policy-info h4 {
+  margin: 0 0 var(--space-2) 0;
+  color: #1e40af;
+  font-size: var(--text-base);
+}
+
+.rejection-policy-info p {
+  margin: var(--space-1) 0;
+  color: #1e3a8a;
+  font-size: var(--text-sm);
+}
+
+.rejection-recommendations {
+  margin-top: var(--space-6);
+  padding: var(--space-4);
+  background-color: #fef3c7;
+  border-radius: 8px;
+}
+
+.rejection-recommendations h4 {
+  margin: 0 0 var(--space-3) 0;
+  color: #92400e;
+  font-size: var(--text-base);
+}
+
+.rejection-recommendations ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: #78350f;
+}
+
+.rejection-recommendations li {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.rejection-modal-footer {
+  padding: var(--space-6);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

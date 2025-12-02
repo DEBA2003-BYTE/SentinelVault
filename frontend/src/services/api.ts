@@ -29,7 +29,10 @@ export const authService = {
       email, 
       password,
       deviceFingerprint: context?.deviceFingerprint,
-      location: context?.location
+      deviceId: context?.deviceId || context?.deviceFingerprint,
+      location: context?.location,
+      gps: context?.gps,
+      localTimestamp: context?.localTimestamp || new Date().toISOString()
     };
     console.log('Login payload:', payload);
     
@@ -62,7 +65,10 @@ export const authService = {
       email, 
       password,
       deviceFingerprint: context?.deviceFingerprint,
-      location: context?.location
+      deviceId: context?.deviceId || context?.deviceFingerprint,
+      location: context?.location,
+      gps: context?.gps,
+      localTimestamp: context?.localTimestamp || new Date().toISOString()
     };
     console.log('Register payload:', payload);
     
@@ -131,16 +137,63 @@ export const fileService = {
   },
 
   async downloadFile(fileId: string, token: string) {
-    const response = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await handleResponse(response);
-    
-    if (data.downloadUrl) {
-      window.open(data.downloadUrl, '_blank');
+    try {
+      // Use backend proxy endpoint to avoid CORS issues
+      const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/download`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
+      // Get the filename from the response headers or use a default
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = 'download';
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      // Get the file content as a blob
+      const blob = await response.blob();
+      
+      // Create a blob URL and trigger download
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      link.style.display = 'none';
+      
+      // Add to DOM, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up the blob URL after download starts
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+    } catch (error) {
+      console.error('Download failed:', error);
+      throw error;
     }
-    
-    return data;
+  },
+
+  async shareFile(fileId: string, visibility: 'all' | 'specific' | 'none', sharedWith: string[], token: string) {
+    const response = await fetch(`${API_BASE_URL}/api/files/${fileId}/share`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ visibility, sharedWith })
+    });
+    return handleResponse(response);
   },
 
   async deleteFile(fileId: string, token: string) {

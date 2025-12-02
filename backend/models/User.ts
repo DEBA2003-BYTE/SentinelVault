@@ -5,6 +5,7 @@ export interface IUser extends Document {
   passwordHash: string;
   isBlocked: boolean;
   isAdmin: boolean;
+  lockReason?: string;
   zkProofData?: {
     proof: string;
     publicSignals: string[];
@@ -23,8 +24,47 @@ export interface IUser extends Document {
   deviceFingerprint?: string;
   registeredLocation?: string;
   lastKnownLocation?: string;
+  gpsLocation?: {
+    type: 'Point';
+    coordinates: [number, number];
+    name?: string;
+  };
+  registeredGpsLocation?: {
+    type: 'Point';
+    coordinates: [number, number];
+    name?: string;
+  };
   lastDeviceFingerprint?: string;
   rejectionReasons?: string[];
+  // RBA fields
+  keystrokeBaseline?: {
+    meanIKI: number;
+    stdIKI: number;
+    samples: number;
+  };
+  locationHistory?: Array<{
+    lat: number;
+    lon: number;
+    timestamp: Date;
+  }>;
+  knownDevices?: Array<{
+    deviceIdHash: string;
+    firstSeen: Date;
+    lastSeen: Date;
+  }>;
+  activityHours?: {
+    start: number;
+    end: number;
+    tz: string;
+  };
+  lastLoginDetails?: {
+    timestamp: Date;
+    ip?: string;
+    gps?: {
+      lat: number;
+      lon: number;
+    };
+  };
   createdAt: Date;
   lastLogin?: Date;
 }
@@ -49,6 +89,9 @@ const userSchema = new Schema<IUser>({
     type: Boolean,
     default: false
   },
+  lockReason: {
+    type: String
+  },
   zkProofData: {
     proof: String,
     publicSignals: [String],
@@ -59,8 +102,14 @@ const userSchema = new Schema<IUser>({
     verifiedAt: Date
   },
   mfaFactors: [{
-    type: String,
-    secretHash: String,
+    type: {
+      type: String,
+      required: true
+    },
+    secretHash: {
+      type: String,
+      required: true
+    },
     isActive: {
       type: Boolean,
       default: true
@@ -84,6 +133,30 @@ const userSchema = new Schema<IUser>({
   lastKnownLocation: {
     type: String
   },
+  gpsLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      default: [0, 0]
+    },
+    name: String
+  },
+  registeredGpsLocation: {
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point'
+    },
+    coordinates: {
+      type: [Number],
+      default: [0, 0]
+    },
+    name: String
+  },
   lastDeviceFingerprint: {
     type: String
   },
@@ -96,6 +169,35 @@ const userSchema = new Schema<IUser>({
   },
   lastLogin: {
     type: Date
+  },
+  // RBA fields
+  keystrokeBaseline: {
+    meanIKI: { type: Number, default: 0 },
+    stdIKI: { type: Number, default: 0 },
+    samples: { type: Number, default: 0 }
+  },
+  locationHistory: [{
+    lat: Number,
+    lon: Number,
+    timestamp: Date
+  }],
+  knownDevices: [{
+    deviceIdHash: String,
+    firstSeen: Date,
+    lastSeen: Date
+  }],
+  activityHours: {
+    start: { type: Number, default: 8 },
+    end: { type: Number, default: 20 },
+    tz: { type: String, default: 'Asia/Kolkata' }
+  },
+  lastLoginDetails: {
+    timestamp: Date,
+    ip: String,
+    gps: {
+      lat: Number,
+      lon: Number
+    }
   }
 });
 

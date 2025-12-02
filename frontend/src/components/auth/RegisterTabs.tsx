@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, Info, MessageSquare, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import LocationPicker from './LocationPicker';
 
 const RegisterTabs: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'register' | 'about' | 'feedback'>('register');
@@ -11,6 +12,7 @@ const RegisterTabs: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [gpsLocation, setGpsLocation] = useState<{ lat: number; lon: number } | null>(null);
 
   // Feedback form state
   const [feedbackEmail, setFeedbackEmail] = useState('');
@@ -21,6 +23,12 @@ const RegisterTabs: React.FC = () => {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!gpsLocation) {
+      setError('GPS location is required. Please allow location access.');
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
@@ -44,7 +52,12 @@ const RegisterTabs: React.FC = () => {
         },
         body: JSON.stringify({
           email,
-          password
+          password,
+          location: gpsLocation ? {
+            type: 'Point',
+            coordinates: [gpsLocation.lon, gpsLocation.lat],
+            name: 'Registration location'
+          } : undefined
         })
       });
 
@@ -258,6 +271,18 @@ const RegisterTabs: React.FC = () => {
                 </div>
               )}
 
+              {/* GPS Location Detection - Required for registration */}
+              <LocationPicker
+                onLocationChange={(location) => {
+                  if (location) {
+                    setGpsLocation({ lat: location.lat, lon: location.lon });
+                  } else {
+                    setGpsLocation(null);
+                  }
+                }}
+                required={true}
+              />
+
               <form onSubmit={handleRegisterSubmit}>
                 <div className="form-group">
                   <label htmlFor="register-email" className="form-label">Email</label>
@@ -310,13 +335,15 @@ const RegisterTabs: React.FC = () => {
                     marginBottom: 'var(--space-4)',
                     padding: 'var(--space-3) var(--space-6)'
                   }}
-                  disabled={loading}
+                  disabled={loading || !gpsLocation}
                 >
                   {loading ? (
                     <>
                       <div className="spinner" />
                       Creating account...
                     </>
+                  ) : !gpsLocation ? (
+                    'Waiting for GPS Location...'
                   ) : (
                     'Create Account'
                   )}

@@ -1,5 +1,5 @@
-import { Request } from 'express';
-import { IUser } from '../models/User';
+import type { Request } from 'express';
+import type { IUser } from '../models/User';
 import geoip from 'geoip-lite';
 
 interface RiskContext {
@@ -99,13 +99,23 @@ export class RiskAssessmentService {
    * Extract client IP address from request
    */
   private extractClientIP(req: Request): string {
-    return (
-      req.headers['x-forwarded-for'] as string ||
-      req.headers['x-real-ip'] as string ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
-      '127.0.0.1'
-    ).split(',')[0].trim();
+    const forwarded = req.headers['x-forwarded-for'];
+    const realIp = req.headers['x-real-ip'];
+    const socketIp = req.socket?.remoteAddress;
+    
+    let ip: string;
+    if (typeof forwarded === 'string' && forwarded) {
+      ip = forwarded;
+    } else if (typeof realIp === 'string' && realIp) {
+      ip = realIp;
+    } else if (socketIp) {
+      ip = socketIp;
+    } else {
+      ip = '127.0.0.1';
+    }
+    
+    const firstIp = ip.split(',')[0];
+    return firstIp ? firstIp.trim() : '127.0.0.1';
   }
 
   /**
@@ -117,8 +127,8 @@ export class RiskAssessmentService {
       if (geo) {
         return {
           country: geo.country,
-          city: geo.city,
-          region: geo.region
+          city: geo.city || 'Unknown',
+          region: geo.region || 'Unknown'
         };
       }
     } catch (error) {
@@ -136,9 +146,9 @@ export class RiskAssessmentService {
       const parts = locationString.split(',').map(part => part.trim());
       if (parts.length >= 2) {
         return {
-          city: parts[0],
-          region: parts.length > 2 ? parts[1] : '',
-          country: parts[parts.length - 1]
+          city: parts[0] || 'Unknown',
+          region: parts.length > 2 ? (parts[1] || '') : '',
+          country: parts[parts.length - 1] || 'Unknown'
         };
       }
     } catch (error) {
@@ -272,7 +282,12 @@ export class RiskAssessmentService {
   measureTypingSpeed(keystrokes: { timestamp: number; key: string }[]): number {
     if (keystrokes.length < 2) return 0;
     
-    const totalTime = keystrokes[keystrokes.length - 1].timestamp - keystrokes[0].timestamp;
+    const lastKeystroke = keystrokes[keystrokes.length - 1];
+    const firstKeystroke = keystrokes[0];
+    
+    if (!lastKeystroke || !firstKeystroke) return 0;
+    
+    const totalTime = lastKeystroke.timestamp - firstKeystroke.timestamp;
     const totalChars = keystrokes.length;
     
     // Calculate WPM (assuming average word length of 5 characters)

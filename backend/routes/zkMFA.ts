@@ -7,7 +7,7 @@ const router = express.Router();
 
 // Validation schemas
 const registerSecretSchema = z.object({
-  secretType: z.enum(['fingerprint_hash', 'face_recognition_hash']),
+  secretType: z.enum(['fingerprint_hash']),
   secretValue: z.string().min(1),
   metadata: z.object({
     strength: z.enum(['weak', 'medium', 'strong'])
@@ -21,13 +21,6 @@ router.get('/factor-types', (req, res) => {
       type: 'fingerprint_hash',
       name: 'Fingerprint Authentication',
       description: 'Secure biometric authentication using your fingerprint',
-      security: 'high',
-      setup: 'easy'
-    },
-    {
-      type: 'face_recognition_hash',
-      name: 'Face Recognition',
-      description: 'Advanced facial recognition for secure access',
       security: 'high',
       setup: 'easy'
     }
@@ -55,19 +48,31 @@ router.get('/factors', authenticateToken, async (req: AuthRequest, res) => {
 // Register a new MFA secret/factor
 router.post('/register-secret', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    console.log('🔍 MFA Registration Request:', {
+      body: req.body,
+      user: req.user?.id
+    });
+
     const { secretType, secretValue, metadata } = registerSecretSchema.parse(req.body);
     const user = req.user!;
+
+    console.log('✅ Request validated:', { secretType, secretValue: '***', metadata });
 
     // Check if user already has this type of factor
     const userData = await User.findById(user.id);
     if (!userData) {
+      console.log('❌ User not found:', user.id);
       return res.status(404).json({ error: 'User not found' });
     }
+
+    console.log('👤 User found:', userData.email);
+    console.log('📋 Current MFA factors:', userData.mfaFactors || []);
 
     const existingFactors = userData.mfaFactors || [];
     const hasExistingType = existingFactors.some(factor => factor.type === secretType);
     
     if (hasExistingType) {
+      console.log('⚠️ Factor type already exists:', secretType);
       return res.status(400).json({ 
         error: 'Factor type already registered',
         details: 'You already have this type of MFA factor registered'
@@ -83,30 +88,45 @@ router.post('/register-secret', authenticateToken, async (req: AuthRequest, res)
       metadata: metadata || { strength: 'strong' }
     };
 
+    console.log('🆕 Creating new factor:', { ...newFactor, secretHash: '***' });
+
     // Add to user's MFA factors
     const updatedFactors = [...existingFactors, newFactor];
     
-    await User.findByIdAndUpdate(user.id, {
-      mfaFactors: updatedFactors
-    });
+    try {
+      console.log('💾 Attempting to save to database...');
+      const result = await User.findByIdAndUpdate(user.id, {
+        mfaFactors: updatedFactors
+      });
+      
+      console.log('✅ Factor registered successfully:', result?.email);
 
-    res.json({
-      message: 'MFA factor registered successfully',
-      factor: {
-        type: newFactor.type,
-        isActive: newFactor.isActive,
-        createdAt: newFactor.createdAt,
-        metadata: newFactor.metadata
-      }
-    });
+      // Verify the factor was actually saved
+      const verification = await User.findById(user.id).select('mfaFactors');
+      console.log('🔍 Verification - saved factors:', verification?.mfaFactors);
+
+      res.json({
+        message: 'MFA factor registered successfully',
+        factor: {
+          type: newFactor.type,
+          isActive: newFactor.isActive,
+          createdAt: newFactor.createdAt,
+          metadata: newFactor.metadata
+        }
+      });
+    } catch (dbError) {
+      console.error('❌ Database error:', dbError);
+      throw dbError;
+    }
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.log('❌ Validation error:', error.issues);
       return res.status(400).json({ 
         error: 'Invalid input',
         details: error.issues.map(issue => issue.message).join(', ')
       });
     }
-    console.error('Register MFA secret error:', error);
+    console.error('❌ Register MFA secret error:', error);
     res.status(500).json({ error: 'Failed to register MFA factor' });
   }
 });
@@ -155,7 +175,7 @@ router.post('/verify', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// Remove MFA factor
+// Remove MFA factor (DELETE method)
 router.delete('/factors/:factorType', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { factorType } = req.params;
@@ -177,6 +197,42 @@ router.delete('/factors/:factorType', authenticateToken, async (req: AuthRequest
 
     res.json({
       message: 'MFA factor removed successfully',
+      removedType: factorType
+    });
+  } catch (error) {
+    console.error('Remove MFA factor error:', error);
+    res.status(500).json({ error: 'Failed to remove MFA factor' });
+  }
+});
+
+// Remove MFA factor (POST method for easier frontend integration)
+router.post('/remove-factor', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { factorType } = req.body;
+    const user = req.user!;
+
+    if (!factorType) {
+      return res.status(400).json({ error: 'Factor type is required' });
+    }
+
+    const userData = await User.findById(user.id);
+    if (!userData) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const factors = userData.mfaFactors || [];
+    const updatedFactors = factors.filter(f => f.type !== factorType);
+    
+    if (factors.length === updatedFactors.length) {
+      return res.status(404).json({ error: 'MFA factor not found' });
+    }
+
+    await User.findByIdAndUpdate(user.id, { mfaFactors: updatedFactors });
+
+    console.log(`✅ MFA factor removed for user ${userData.email}: ${factorType}`);
+
+    res.json({
+      message: 'MFA factor removed successfully. You can now re-register it.',
       removedType: factorType
     });
   } catch (error) {

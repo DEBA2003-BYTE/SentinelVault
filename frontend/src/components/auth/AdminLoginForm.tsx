@@ -1,26 +1,56 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
 import { ApiError } from '../../services/api';
+import LocationPicker from './LocationPicker';
 
 const AdminLoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [gpsLocation, setGpsLocation] = useState<{ lat: number; lon: number } | null>(null);
   
-  const { loginAdmin } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!gpsLocation) {
+      setError('GPS location is required. Please allow location access.');
+      return;
+    }
+    
     setLoading(true);
     setError('');
 
     try {
-      await loginAdmin(email, password);
-      navigate('/admin');
+      // Call login API with GPS location (admin uses same endpoint)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          gps: gpsLocation,
+          location: {
+            type: 'Point',
+            coordinates: [gpsLocation.lon, gpsLocation.lat],
+            name: 'Admin login location'
+          }
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        navigate('/admin');
+      } else {
+        setError(data.error || 'Admin login failed');
+      }
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -49,6 +79,18 @@ const AdminLoginForm: React.FC = () => {
             {error}
           </div>
         )}
+
+        {/* GPS Location Detection - Track admin location */}
+        <LocationPicker
+          onLocationChange={(location) => {
+            if (location) {
+              setGpsLocation({ lat: location.lat, lon: location.lon });
+            } else {
+              setGpsLocation(null);
+            }
+          }}
+          required={true}
+        />
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -83,13 +125,15 @@ const AdminLoginForm: React.FC = () => {
             type="submit"
             className="btn btn-primary"
             style={{ width: '100%', marginBottom: 'var(--space-4)', backgroundColor: '#dc2626' }}
-            disabled={loading}
+            disabled={loading || !gpsLocation}
           >
             {loading ? (
               <>
                 <div className="spinner" />
                 Authenticating...
               </>
+            ) : !gpsLocation ? (
+              'Waiting for GPS Location...'
             ) : (
               'Admin Sign In'
             )}

@@ -24,7 +24,8 @@ const ContextMonitor: React.FC = () => {
     );
   }
 
-  const isLocationMatch = user?.registeredLocation === deviceContext.location;
+  const currentLocation = deviceContext.location?.name || 'Unknown';
+  const isLocationMatch = user?.registeredLocation === currentLocation;
   const isDeviceMatch = user?.deviceFingerprint === deviceContext.fingerprint;
 
   return (
@@ -46,7 +47,7 @@ const ContextMonitor: React.FC = () => {
           <div className="context-content">
             <div className="current-value">
               <span className="label">Current:</span>
-              <span className="value">{deviceContext.location || 'Unknown'}</span>
+              <span className="value">{currentLocation}</span>
             </div>
             {user?.registeredLocation && (
               <div className="registered-value">

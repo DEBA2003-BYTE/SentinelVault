@@ -12,6 +12,8 @@ const router = express.Router();
 // Get all users
 router.get('/users', authenticateToken, requireAdmin, async (req: AuthRequest, res) => {
   try {
+    console.log('Admin route accessed by user:', req.user?.id);
+    
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
@@ -53,18 +55,37 @@ router.get('/users', authenticateToken, requireAdmin, async (req: AuthRequest, r
       })
     );
 
-    res.json({
-      users: usersWithStats,
+    // Ensure we're not sending sensitive data
+    const response = {
+      users: usersWithStats.map(user => ({
+        ...user,
+        // Remove any sensitive data
+        deviceFingerprint: undefined,
+        registeredLocation: undefined,
+        lastKnownLocation: undefined
+      })),
       pagination: {
         page,
         limit,
         total,
         pages: Math.ceil(total / limit)
       }
-    });
+    };
+    
+    console.log(`Returning ${response.users.length} users`);
+    res.json(response);
   } catch (error) {
     console.error('Get users error:', error);
-    res.status(500).json({ error: 'Failed to get users' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      userId: req.user?.id
+    });
+    res.status(500).json({ 
+      error: 'Failed to get users',
+      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    });
   }
 });
 
@@ -91,6 +112,24 @@ router.post('/users/:id/block', authenticateToken, requireAdmin, async (req: Aut
     }
 
     user.isBlocked = blocked;
+    
+    // If unblocking, clear the lock reason and reset ALL failed attempts to zero
+    if (!blocked) {
+      user.lockReason = undefined;
+      
+      // Delete ALL failed password attempts from RiskEvent collection (resets counter to 0)
+      const { RiskEvent } = await import('../models/RiskEvent');
+      const deletedCount = await RiskEvent.deleteMany({
+        userId: user._id,
+        action: 'failed-password'
+      });
+      
+      // Also clear FailedLoginAttempt collection (used by rate limiter)
+      await rateLimiterService.clearFailedAttempts(user.email);
+      
+      console.log(`✅ RESET: Cleared ${deletedCount.deletedCount} RiskEvent failed attempts for user ${user.email} - Counter now at 0`);
+    }
+    
     await user.save();
 
     console.log('User status updated:', { email: user.email, isBlocked: user.isBlocked });
@@ -100,8 +139,6 @@ router.post('/users/:id/block', authenticateToken, requireAdmin, async (req: Aut
       userId: req.user!.id, // Admin who performed the action
       action: blocked ? 'admin_block_user' : 'admin_unblock_user',
       riskScore: 0,
-      ipAddress: req.ip || 'unknown',
-      userAgent: req.headers['user-agent'],
       allowed: true,
       reason: `${blocked ? 'Blocked' : 'Unblocked'} user: ${user.email}`
     }).save();
@@ -111,7 +148,8 @@ router.post('/users/:id/block', authenticateToken, requireAdmin, async (req: Aut
       user: {
         id: user._id,
         email: user.email,
-        isBlocked: user.isBlocked
+        isBlocked: user.isBlocked,
+        failedAttemptsReset: !blocked // Indicates if failed attempts were reset
       }
     });
   } catch (error) {
@@ -163,8 +201,6 @@ router.delete('/users/:id', authenticateToken, requireAdmin, async (req: AuthReq
       userId: req.user!.id, // Admin who performed the deletion
       action: 'admin_delete_user',
       riskScore: 0,
-      ipAddress: req.ip || 'unknown',
-      userAgent: req.headers['user-agent'],
       allowed: true,
       reason: `Deleted user: ${user.email}`
     }).save();
@@ -220,16 +256,17 @@ router.get('/audit', authenticateToken, requireAdmin, async (req: AuthRequest, r
           userId: populatedUser ? { email: populatedUser.email } : null,
           user: populatedUser ? populatedUser.email : 'Unknown',
           file: populatedFile ? populatedFile.originalName : null,
+          fileId: populatedFile ? { originalName: populatedFile.originalName } : null,
           action: log.action,
           riskScore: log.riskScore,
-          ipAddress: log.ipAddress,
-          deviceFingerprint: log.deviceFingerprint,
           location: log.location,
           timestamp: log.timestamp,
           allowed: log.allowed,
           reason: log.reason,
           opaDecision: log.opaDecision,
-          zkpVerified: log.zkpVerified
+          zkpVerified: log.zkpVerified,
+          userEmail: populatedUser ? populatedUser.email : log.userEmail,
+          riskAssessment: log.riskAssessment
         };
       }),
       pagination: {
@@ -418,11 +455,22 @@ router.post('/users/:userId/unblock', authenticateToken, requireAdmin, async (re
 
     // Unblock the user
     user.isBlocked = false;
+    user.lockReason = undefined;
     user.rejectionReasons = user.rejectionReasons || [];
     user.rejectionReasons.push(`Account unblocked by admin: ${reason || 'No reason provided'}`);
+    
+    // Delete ALL failed password attempts for this user (resets counter to 0)
+    const { RiskEvent } = await import('../models/RiskEvent');
+    const deletedCount = await RiskEvent.deleteMany({
+      userId: user._id,
+      action: 'failed-password'
+    });
+    
+    console.log(`✅ RESET: Cleared ${deletedCount.deletedCount} failed attempts for user ${user.email} - Counter now at 0`);
+    
     await user.save();
 
-    // Clear failed attempts
+    // Clear failed attempts from rate limiter as well
     await rateLimiterService.clearFailedAttempts(user.email);
 
     // Log the unblock action
@@ -430,33 +478,35 @@ router.post('/users/:userId/unblock', authenticateToken, requireAdmin, async (re
       userId: user._id,
       action: 'account_unblocked',
       riskScore: 0,
-      ipAddress: req.ip || 'admin',
       allowed: true,
-      reason: `Account unblocked by admin: ${reason || 'No reason provided'}`,
-      timestamp: new Date()
+      reason: `Account unblocked by admin: ${reason || 'No reason provided'}. Failed attempts reset to 0.`,
+      timestamp: new Date(),
+      userEmail: user.email
     }).save();
 
     // Create notification for the unblock action
     await new AdminNotification({
       type: 'system_alert',
       title: `Account Unblocked: ${user.email}`,
-      message: `Account has been unblocked by admin. Reason: ${reason || 'No reason provided'}`,
+      message: `Account has been unblocked by admin. Failed attempts reset to 0. Reason: ${reason || 'No reason provided'}`,
       severity: 'medium',
       userId: user._id,
       userEmail: user.email,
       metadata: {
-        blockReason: reason || 'Admin unblock'
+        blockReason: reason || 'Admin unblock',
+        failedAttemptsCleared: deletedCount.deletedCount
       },
       isRead: false,
       createdAt: new Date()
     }).save();
 
     res.json({
-      message: 'User account unblocked successfully',
+      message: 'User account unblocked successfully. Failed attempts reset to 0.',
       user: {
         id: user._id,
         email: user.email,
-        isBlocked: user.isBlocked
+        isBlocked: user.isBlocked,
+        failedAttemptsCleared: deletedCount.deletedCount
       }
     });
   } catch (error) {
@@ -572,9 +622,7 @@ router.get('/flagged-attempts', authenticateToken, requireAdmin, async (req: Aut
         riskLevel,
         allowed: attempt.allowed,
         reason: attempt.reason || 'No reason provided',
-        ipAddress: attempt.ipAddress,
         location: attempt.location,
-        deviceFingerprint: attempt.deviceFingerprint,
         timestamp: attempt.timestamp,
         policyViolations: [] // Would be populated from policy results if stored
       };

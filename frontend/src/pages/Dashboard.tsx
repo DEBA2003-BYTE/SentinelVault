@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Upload, Shield, Key } from 'lucide-react';
+import { FileText, Upload, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 import { fileService, riskService } from '../services/api';
 import type { FileItem, RiskAssessment } from '../types';
 import RiskIndicator from '../components/common/RiskIndicator';
-import ZKPStatusCard from '../components/zkproofs/ZKPStatusCard';
-import QuickZKPVerify from '../components/zkproofs/QuickZKPVerify';
 import RiskMeter from '../components/security/RiskMeter';
 
 const Dashboard: React.FC = () => {
@@ -135,30 +133,9 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-            <div style={{
-              padding: 'var(--space-3)',
-              backgroundColor: user?.zkpVerified ? '#d1fae5' : '#fef3c7',
-              borderRadius: '8px'
-            }}>
-              <Key size={24} style={{ 
-                color: user?.zkpVerified ? 'var(--color-success)' : 'var(--color-warning)' 
-              }} />
-            </div>
-            <div>
-              <div style={{ fontSize: 'var(--text-2xl)', fontWeight: 'var(--font-bold)' }}>
-                {user?.zkpVerified ? 'Yes' : 'No'}
-              </div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-gray-600)' }}>
-                ZKP Verified
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <div className="grid grid-cols-3" style={{ gap: 'var(--space-8)' }}>
+      <div className="grid grid-cols-2" style={{ gap: 'var(--space-8)' }}>
         {/* Recent Files */}
         <div className="card">
           <div className="card-header">
@@ -213,16 +190,6 @@ const Dashboard: React.FC = () => {
                   Security Factors
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  {/* Only show ZKP if verified */}
-                  {user?.zkpVerified === true && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
-                      <span>ZKP Verified:</span>
-                      <span style={{ color: 'var(--color-success)' }}>
-                        Yes
-                      </span>
-                    </div>
-                  )}
-                  
                   {/* Only show Device if registered */}
                   {(user?.deviceFingerprint && user.deviceFingerprint !== 'unknown' && user.deviceFingerprint.length > 0) && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
@@ -238,14 +205,13 @@ const Dashboard: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)' }}>
                       <span>Location:</span>
                       <span style={{ color: 'var(--color-gray-600)' }}>
-                        {user?.registeredLocation || deviceContext?.location}
+                        {user?.registeredLocation || (typeof deviceContext?.location === 'string' ? deviceContext?.location : deviceContext?.location?.name) || 'Unknown'}
                       </span>
                     </div>
                   )}
                   
                   {/* Show message if no security factors are active */}
-                  {!user?.zkpVerified && 
-                   !(user?.deviceFingerprint && user.deviceFingerprint !== 'unknown' && user.deviceFingerprint.length > 0) && 
+                  {!(user?.deviceFingerprint && user.deviceFingerprint !== 'unknown' && user.deviceFingerprint.length > 0) && 
                    !(user?.registeredLocation || deviceContext?.location) && (
                     <div style={{ 
                       fontSize: 'var(--text-sm)', 
@@ -296,15 +262,6 @@ const Dashboard: React.FC = () => {
           )}
         </div>
 
-        {/* ZKP Status */}
-        <div>
-          <ZKPStatusCard />
-        </div>
-
-        {/* Quick ZKP Verification */}
-        <div>
-          <QuickZKPVerify />
-        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, AlertTriangle, CheckCircle, X, Fingerprint, Camera } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, X, Fingerprint } from 'lucide-react';
 
 interface MFAStepUpProps {
   isOpen: boolean;
@@ -39,9 +39,6 @@ const MFAStepUp: React.FC<MFAStepUpProps> = ({
       if (selectedMethod === 'fingerprint_hash') {
         // Simulate fingerprint capture
         await simulateFingerprintCapture();
-      } else if (selectedMethod === 'face_recognition_hash') {
-        // Simulate face recognition
-        await simulateFaceRecognition();
       }
 
       // If successful, mark device as trusted if requested
@@ -72,19 +69,6 @@ const MFAStepUp: React.FC<MFAStepUpProps> = ({
           reject(new Error('Fingerprint not recognized. Please try again.'));
         }
       }, 2000);
-    });
-  };
-
-  const simulateFaceRecognition = async (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simulate 85% success rate
-        if (Math.random() > 0.15) {
-          resolve();
-        } else {
-          reject(new Error('Face not recognized. Please ensure good lighting and try again.'));
-        }
-      }, 3000);
     });
   };
 
@@ -221,40 +205,6 @@ const MFAStepUp: React.FC<MFAStepUpProps> = ({
                   </div>
                 </button>
               )}
-
-              {availableMethods.includes('face_recognition_hash') && (
-                <button
-                  onClick={() => handleMethodSelect('face_recognition_hash')}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '1rem',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
-                    backgroundColor: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    fontSize: '0.875rem'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#3b82f6';
-                    e.currentTarget.style.backgroundColor = '#f8fafc';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.backgroundColor = 'white';
-                  }}
-                >
-                  <Camera size={24} style={{ color: '#3b82f6' }} />
-                  <div>
-                    <div style={{ fontWeight: '500' }}>Face Recognition</div>
-                    <div style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                      Use your camera to verify your identity
-                    </div>
-                  </div>
-                </button>
-              )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -275,22 +225,15 @@ const MFAStepUp: React.FC<MFAStepUpProps> = ({
         {mfaStep === 'verify' && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ marginBottom: '1.5rem' }}>
-              {selectedMethod === 'fingerprint_hash' ? (
-                <Fingerprint size={48} style={{ color: '#3b82f6', margin: '0 auto' }} />
-              ) : (
-                <Camera size={48} style={{ color: '#3b82f6', margin: '0 auto' }} />
-              )}
+              <Fingerprint size={48} style={{ color: '#3b82f6', margin: '0 auto' }} />
             </div>
             
             <h3 style={{ marginBottom: '0.5rem' }}>
-              {selectedMethod === 'fingerprint_hash' ? 'Place Your Finger' : 'Look at the Camera'}
+              Place Your Finger
             </h3>
             
             <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
-              {selectedMethod === 'fingerprint_hash' 
-                ? 'Place your finger on the sensor to verify your identity'
-                : 'Position your face in the camera frame for verification'
-              }
+              Place your finger on the sensor to verify your identity
             </p>
 
             {error && (

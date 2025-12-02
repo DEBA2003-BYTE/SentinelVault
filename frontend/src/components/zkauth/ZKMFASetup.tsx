@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Plus, CheckCircle, AlertCircle, Fingerprint, User, Camera, Scan } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Plus, CheckCircle, AlertCircle, Fingerprint } from 'lucide-react';
 
 interface MFAFactor {
   type: string;
@@ -28,82 +28,76 @@ interface BiometricCaptureProps {
 }
 
 const BiometricCapture: React.FC<BiometricCaptureProps> = ({ factorType, onCapture, loading }) => {
-  const [isCapturing, setIsCapturing] = useState(false);
   const [captureStatus, setCaptureStatus] = useState<'idle' | 'capturing' | 'success' | 'error'>('idle');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const startCapture = async () => {
-    setIsCapturing(true);
     setCaptureStatus('capturing');
 
-    if (factorType.type === 'face_recognition_hash') {
+    if (factorType.type === 'fingerprint_hash') {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { 
-            width: 640, 
-            height: 480,
-            facingMode: 'user'
-          } 
-        });
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
+        // Check if WebAuthn is supported
+        if (!window.PublicKeyCredential) {
+          setCaptureStatus('error');
+          alert('Biometric authentication is not supported on this browser. Please use Chrome, Edge, Safari, or Firefox.');
+          return;
         }
-      } catch (error) {
-        setCaptureStatus('error');
-        console.error('Error accessing camera:', error);
-      }
-    } else if (factorType.type === 'fingerprint_hash') {
-      // Simulate fingerprint capture
-      setTimeout(() => {
-        const mockFingerprintHash = 'fp_' + Math.random().toString(36).substring(2, 15);
-        onCapture(mockFingerprintHash);
-        setCaptureStatus('success');
-        setIsCapturing(false);
-      }, 2000);
-    }
-  };
 
-  const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const video = videoRef.current;
-      const ctx = canvas.getContext('2d');
-      
-      if (ctx) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-        
-        // Generate mock face recognition hash from image data
-        const imageData = canvas.toDataURL('image/jpeg', 0.8);
-        const mockFaceHash = 'face_' + btoa(imageData.slice(-20)).substring(0, 15);
-        
-        onCapture(mockFaceHash);
-        setCaptureStatus('success');
-        
-        // Stop video stream
-        const stream = video.srcObject as MediaStream;
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
+        // Create WebAuthn credential for fingerprint registration
+        const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions = {
+          challenge: new Uint8Array(32), // Random challenge
+          rp: {
+            name: 'SentinelVault',
+            id: window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname
+          },
+          user: {
+            id: new Uint8Array(16), // Random user ID
+            name: 'user@sentinelvault.com',
+            displayName: 'SentinelVault User'
+          },
+          pubKeyCredParams: [
+            { alg: -7, type: 'public-key' },  // ES256
+            { alg: -257, type: 'public-key' } // RS256
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform', // Use platform authenticator (Touch ID, Face ID, Windows Hello)
+            userVerification: 'required' // Require biometric verification
+          },
+          timeout: 60000,
+          attestation: 'none'
+        };
+
+        // Prompt user for biometric registration
+        const credential = await navigator.credentials.create({
+          publicKey: publicKeyCredentialCreationOptions
+        }) as PublicKeyCredential;
+
+        if (credential) {
+          // Successfully registered biometric
+          const credentialId = credential.id;
+          console.log('✅ Biometric registered successfully:', credentialId);
+          onCapture(credentialId);
+          setCaptureStatus('success');
+        } else {
+          setCaptureStatus('error');
         }
-        setIsCapturing(false);
+      } catch (error: any) {
+        console.error('❌ Biometric registration error:', error);
+        setCaptureStatus('error');
+        
+        if (error.name === 'NotAllowedError') {
+          alert('Biometric registration was cancelled. Please try again.');
+        } else if (error.name === 'NotSupportedError') {
+          alert('Your device does not support biometric authentication.');
+        } else {
+          alert('Failed to register biometric. Please ensure your fingerprint/face is set up on this device.');
+        }
       }
     }
   };
 
   const resetCapture = () => {
     setCaptureStatus('idle');
-    setIsCapturing(false);
     onCapture('');
-    
-    // Stop video stream if active
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-    }
   };
 
   return (
@@ -119,77 +113,21 @@ const BiometricCapture: React.FC<BiometricCaptureProps> = ({ factorType, onCaptu
         textAlign: 'center',
         backgroundColor: 'var(--color-bg-secondary)'
       }}>
-        {factorType.type === 'face_recognition_hash' && (
-          <>
-            {!isCapturing && captureStatus === 'idle' && (
-              <div>
-                <Camera size={48} style={{ color: 'var(--color-gray-400)', marginBottom: 'var(--space-3)' }} />
-                <h4 style={{ marginBottom: 'var(--space-2)' }}>Face Recognition Setup</h4>
-                <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-4)' }}>
-                  Position your face in front of the camera for secure biometric registration
-                </p>
-                <button
-                  onClick={startCapture}
-                  className="btn btn-primary"
-                  disabled={loading}
-                >
-                  <Camera size={16} style={{ marginRight: 'var(--space-2)' }} />
-                  Start Face Capture
-                </button>
-              </div>
-            )}
-            
-            {isCapturing && (
-              <div>
-                <video
-                  ref={videoRef}
-                  style={{
-                    width: '100%',
-                    maxWidth: '400px',
-                    height: 'auto',
-                    borderRadius: '8px',
-                    marginBottom: 'var(--space-4)'
-                  }}
-                  autoPlay
-                  muted
-                />
-                <canvas ref={canvasRef} style={{ display: 'none' }} />
-                <div style={{ display: 'flex', gap: 'var(--space-3)', justifyContent: 'center' }}>
-                  <button
-                    onClick={captureImage}
-                    className="btn btn-success"
-                  >
-                    <CheckCircle size={16} style={{ marginRight: 'var(--space-2)' }} />
-                    Capture Face
-                  </button>
-                  <button
-                    onClick={resetCapture}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
         {factorType.type === 'fingerprint_hash' && (
           <>
             {captureStatus === 'idle' && (
               <div>
                 <Fingerprint size={48} style={{ color: 'var(--color-gray-400)', marginBottom: 'var(--space-3)' }} />
-                <h4 style={{ marginBottom: 'var(--space-2)' }}>Fingerprint Setup</h4>
+                <h4 style={{ marginBottom: 'var(--space-2)' }}>Biometric Setup</h4>
                 <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-4)' }}>
-                  Place your finger on the sensor to register your fingerprint
+                  Register your fingerprint, Face ID, or Windows Hello for secure authentication
                 </p>
                 <button
                   onClick={startCapture}
                   className="btn btn-primary"
                   disabled={loading}
                 >
-                  <Scan size={16} style={{ marginRight: 'var(--space-2)' }} />
-                  Scan Fingerprint
+                  👆 Register Biometric
                 </button>
               </div>
             )}
@@ -209,9 +147,9 @@ const BiometricCapture: React.FC<BiometricCaptureProps> = ({ factorType, onCaptu
                 }}>
                   <Fingerprint size={48} style={{ color: 'var(--color-brand)' }} />
                 </div>
-                <h4 style={{ marginBottom: 'var(--space-2)' }}>Scanning...</h4>
+                <h4 style={{ marginBottom: 'var(--space-2)' }}>Waiting for Biometric...</h4>
                 <p style={{ color: 'var(--color-gray-600)' }}>
-                  Keep your finger steady on the sensor
+                  Follow your device's prompt to scan your fingerprint or face
                 </p>
               </div>
             )}
@@ -222,16 +160,16 @@ const BiometricCapture: React.FC<BiometricCaptureProps> = ({ factorType, onCaptu
           <div>
             <CheckCircle size={48} style={{ color: 'var(--color-success)', marginBottom: 'var(--space-3)' }} />
             <h4 style={{ color: 'var(--color-success)', marginBottom: 'var(--space-2)' }}>
-              Capture Successful!
+              Biometric Registered!
             </h4>
             <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-4)' }}>
-              Your {factorType.name.toLowerCase()} has been captured and processed
+              Your biometric authentication has been successfully registered. Click "Register Factor" below to save it.
             </p>
             <button
               onClick={resetCapture}
               className="btn btn-secondary"
             >
-              Capture Again
+              Register Again
             </button>
           </div>
         )}
@@ -295,7 +233,7 @@ const ZKMFASetup: React.FC<ZKMFASetupProps> = ({ token }) => {
   };
 
   const fetchAvailableTypes = async () => {
-    // Define only face recognition and fingerprint types
+    // Define only fingerprint type
     const factorTypes: FactorType[] = [
       {
         type: 'fingerprint_hash',
@@ -303,20 +241,54 @@ const ZKMFASetup: React.FC<ZKMFASetupProps> = ({ token }) => {
         description: 'Secure biometric authentication using your fingerprint',
         security: 'high',
         setup: 'easy'
-      },
-      {
-        type: 'face_recognition_hash',
-        name: 'Face Recognition',
-        description: 'Advanced facial recognition for secure access',
-        security: 'high',
-        setup: 'easy'
       }
     ];
     setAvailableTypes(factorTypes);
   };
 
+  const handleRemoveFactor = async (factorType: string) => {
+    if (!confirm('Are you sure you want to reset this MFA factor? You will need to re-register it.')) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/zk-mfa/remove-factor`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ factorType })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('MFA factor removed successfully. You can re-register it now.');
+        fetchFactors();
+      } else {
+        setError(data.error || 'Failed to remove factor');
+      }
+    } catch (error) {
+      console.error('Error removing factor:', error);
+      setError('Network error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRegisterFactor = async () => {
+    console.log('🔍 Starting MFA Factor Registration:', {
+      selectedType: selectedType?.type,
+      secretValue: secretValue ? '***' : 'empty',
+      token: token ? '***' : 'missing'
+    });
+
     if (!selectedType || !secretValue) {
+      console.log('❌ Validation failed: missing type or value');
       setError('Please select a factor type and provide a value');
       return;
     }
@@ -325,33 +297,47 @@ const ZKMFASetup: React.FC<ZKMFASetupProps> = ({ token }) => {
     setError('');
 
     try {
+      const requestBody = {
+        secretType: selectedType.type,
+        secretValue,
+        metadata: {
+          strength: getSecretStrength(secretValue, selectedType.type)
+        }
+      };
+
+      console.log('📤 Sending registration request:', {
+        ...requestBody,
+        secretValue: '***'
+      });
+
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/zk-mfa/register-secret`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          secretType: selectedType.type,
-          secretValue,
-          metadata: {
-            strength: getSecretStrength(secretValue, selectedType.type)
-          }
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
       const data = await response.json();
+      console.log('📥 Response data:', data);
 
       if (response.ok) {
+        console.log('✅ Registration successful');
         setSuccess(`${selectedType.name} registered successfully`);
         setSecretValue('');
         setSelectedType(null);
         setShowSetup(false);
         fetchFactors();
       } else {
+        console.log('❌ Registration failed:', response.status, data);
         setError(data.error || 'Failed to register factor');
       }
     } catch (error) {
+      console.error('❌ Network error:', error);
       setError('Network error occurred');
     } finally {
       setLoading(false);
@@ -360,7 +346,7 @@ const ZKMFASetup: React.FC<ZKMFASetupProps> = ({ token }) => {
 
   const getSecretStrength = (_value: string, type: string): 'weak' | 'medium' | 'strong' => {
     // For biometric types, strength is always high
-    if (type === 'fingerprint_hash' || type === 'face_recognition_hash') {
+    if (type === 'fingerprint_hash') {
       return 'strong';
     }
     return 'medium';
@@ -369,7 +355,6 @@ const ZKMFASetup: React.FC<ZKMFASetupProps> = ({ token }) => {
   const getFactorIcon = (type: string) => {
     switch (type) {
       case 'fingerprint_hash': return <Fingerprint size={20} />;
-      case 'face_recognition_hash': return <User size={20} />;
       default: return <Shield size={20} />;
     }
   };
@@ -480,6 +465,16 @@ const ZKMFASetup: React.FC<ZKMFASetupProps> = ({ token }) => {
                   }}>
                     {factor.isActive ? 'Active' : 'Inactive'}
                   </span>
+                  <button
+                    onClick={() => handleRemoveFactor(factor.type)}
+                    className="btn btn-danger btn-sm"
+                    style={{
+                      padding: '0.25rem 0.75rem',
+                      fontSize: 'var(--text-xs)'
+                    }}
+                  >
+                    🔄 Reset
+                  </button>
                 </div>
               </div>
             ))}

@@ -49,7 +49,15 @@ export const generateDeviceFingerprint = (): string => {
   return fingerprint;
 };
 
-export const getGPSLocation = async (): Promise<string | null> => {
+export interface GPSLocation {
+  type: 'Point';
+  coordinates: [number, number]; // [longitude, latitude]
+  name?: string;
+  lat: number;
+  lon: number;
+}
+
+export const getGPSLocation = async (): Promise<GPSLocation | null> => {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
       console.warn('Geolocation is not supported by this browser');
@@ -73,20 +81,33 @@ export const getGPSLocation = async (): Promise<string | null> => {
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
           );
           
+          let locationName = 'Unknown Location';
           if (response.ok) {
             const data = await response.json();
-            const location = `${data.city || data.locality || 'Unknown City'}, ${data.countryName || 'Unknown Country'}`;
-            console.log('GPS location detected:', location);
-            resolve(location);
-          } else {
-            // Fallback to coordinates if reverse geocoding fails
-            resolve(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
+            locationName = `${data.city || data.locality || 'Unknown City'}, ${data.countryName || 'Unknown Country'}`;
           }
+          
+          const gpsLocation: GPSLocation = {
+            type: 'Point',
+            coordinates: [longitude, latitude], // GeoJSON format: [lon, lat]
+            name: locationName,
+            lat: latitude,
+            lon: longitude
+          };
+          
+          console.log('GPS location detected:', gpsLocation);
+          resolve(gpsLocation);
         } catch (error) {
           console.warn('Reverse geocoding failed:', error);
-          // Fallback to coordinates
+          // Fallback with coordinates only
           const { latitude, longitude } = position.coords;
-          resolve(`${latitude.toFixed(2)}, ${longitude.toFixed(2)}`);
+          resolve({
+            type: 'Point',
+            coordinates: [longitude, latitude],
+            name: `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+            lat: latitude,
+            lon: longitude
+          });
         }
       },
       (error) => {
@@ -98,7 +119,7 @@ export const getGPSLocation = async (): Promise<string | null> => {
   });
 };
 
-export const getLocationInfo = async (): Promise<string | null> => {
+export const getLocationInfo = async (): Promise<GPSLocation | null> => {
   // Try GPS first
   const gpsLocation = await getGPSLocation();
   if (gpsLocation) {
@@ -110,8 +131,14 @@ export const getLocationInfo = async (): Promise<string | null> => {
     const response = await fetch('https://ipapi.co/json/');
     const data = await response.json();
     
-    if (data.city && data.country) {
-      return `${data.city}, ${data.country}`;
+    if (data.latitude && data.longitude) {
+      return {
+        type: 'Point',
+        coordinates: [data.longitude, data.latitude],
+        name: `${data.city || 'Unknown'}, ${data.country_name || 'Unknown'}`,
+        lat: data.latitude,
+        lon: data.longitude
+      };
     }
   } catch (error) {
     console.warn('IP-based location detection failed:', error);
@@ -126,7 +153,10 @@ export const getDeviceContext = async () => {
   
   return {
     fingerprint,
-    location: location || 'Location Not Provided',
+    location: location,
+    gps: location ? { lat: location.lat, lon: location.lon } : null,
+    deviceId: fingerprint, // Use fingerprint as deviceId for RBA
+    localTimestamp: new Date().toISOString(),
     userAgent: navigator.userAgent,
     timestamp: new Date().toISOString(),
     // Additional client info for enhanced fingerprinting

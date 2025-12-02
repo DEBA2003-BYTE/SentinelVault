@@ -22,10 +22,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -45,7 +49,7 @@ const connectToMongoDB = async (retries = 3) => {
     maxPoolSize: 10,
     minPoolSize: 2,
     maxIdleTimeMS: 30000,
-    bufferCommands: true, // Enable buffering to prevent early query errors
+    bufferCommands: false, // Disable buffering to fail fast
   };
 
   for (let i = 0; i < retries; i++) {
@@ -55,14 +59,17 @@ const connectToMongoDB = async (retries = 3) => {
       console.log('✅ Connected to MongoDB successfully');
       
       // Test the connection
-      await mongoose.connection.db.admin().ping();
-      console.log('✅ MongoDB ping successful');
+      if (mongoose.connection.db) {
+        await mongoose.connection.db.admin().ping();
+        console.log('✅ MongoDB ping successful');
+      }
       
       // Initialize OPA policies (non-blocking)
       initializeOPA();
       return;
     } catch (error) {
-      console.error(`❌ MongoDB connection attempt ${i + 1} failed:`, error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ MongoDB connection attempt ${i + 1} failed:`, errorMessage);
       
       if (i === retries - 1) {
         console.error(`💥 Failed to connect to MongoDB after ${retries} attempts`);

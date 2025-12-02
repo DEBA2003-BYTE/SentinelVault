@@ -34,6 +34,9 @@ export interface FileItem {
   mimeType: string;
   uploadedAt: string;
   accessCount: number;
+  visibility?: 'all' | 'specific' | 'none';
+  sharedWith?: string[];
+  isOwned?: boolean;
 }
 
 export interface UploadResponse {
@@ -154,9 +157,20 @@ export interface RejectionReason {
   };
 }
 
+export interface GPSLocation {
+  type: 'Point';
+  coordinates: [number, number];
+  name?: string;
+  lat: number;
+  lon: number;
+}
+
 export interface DeviceContext {
   fingerprint: string;
-  location?: string;
+  location?: GPSLocation | null;
+  gps?: { lat: number; lon: number } | null;
+  deviceId?: string;
+  localTimestamp?: string;
   userAgent: string;
   ipAddress?: string;
   timestamp: string;
