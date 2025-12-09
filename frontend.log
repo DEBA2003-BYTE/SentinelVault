@@ -3,9 +3,7 @@
 > vite
 
 
-  VITE v7.1.11  ready in 94 ms
+  VITE v7.1.11  ready in 117 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: use --host to expose
-10:58:14 PM [vite] (client) hmr update /src/components/auth/AuthTabs.tsx
-10:58:26 PM [vite] (client) hmr update /src/components/auth/AuthTabs.tsx

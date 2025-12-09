@@ -74,12 +74,17 @@ interface AccessLog {
     originalName?: string;
   };
   zkpVerified?: boolean;
+  // Session tracking fields
+  sessionTime?: number;
+  deleteKeyCount?: number;
+  failedAttempts?: number;
   riskAssessment?: {
     breakdown?: {
       failedAttempts?: number;
       gps?: number;
       typing?: number;
       timeOfDay?: number;
+      timeOnPage?: number;
       velocity?: number;
       newDevice?: number;
     };
@@ -96,6 +101,14 @@ interface AccessLog {
     };
     weighted_scores?: Record<string, number>;
     details?: Record<string, any>;
+  };
+  riskFactors?: {
+    failedLoginAttempts?: number;
+    gpsDistanceKm?: number;
+    timeOnPageSeconds?: number;
+    unusualLocation?: boolean;
+    newDevice?: boolean;
+    suspiciousTyping?: boolean;
   };
 }
 
@@ -1060,19 +1073,18 @@ const Admin: React.FC = () => {
                 <thead>
                   <tr>
                     <th>Timestamp</th>
-                    <th>Action</th>
                     <th>User Email</th>
-                    <th>Location</th>
+                    <th>Session Time</th>
+                    <th>Delete Keys</th>
+                    <th>Failed Attempts</th>
                     <th>Risk Score</th>
                     <th>Status</th>
-                    <th>Reason</th>
-                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="text-center">
+                      <td colSpan={7} className="text-center">
                         <div className="empty-state">
                           <h3>No access logs found</h3>
                           <p>No access logs available in the system.</p>
@@ -1088,56 +1100,37 @@ const Admin: React.FC = () => {
                           </div>
                         </td>
                         <td>
-                          <div className="text-sm font-medium">
-                            {log.action}
-                          </div>
-                        </td>
-                        <td>
                           <div className="text-sm">
-                            {log.user || 'Unknown'}
+                            {log.userEmail || log.user || 'Unknown'}
                           </div>
                         </td>
                         <td>
-                          <div className="text-xs">
-                            {log.location ? (
-                              typeof log.location === 'string' ? (
-                                log.location
-                              ) : log.location.coordinates && log.location.coordinates.length === 2 ? (
-                                <div>
-                                  <div className="font-medium">{log.location.name || 'Location'}</div>
-                                  <div className="text-gray-500 dark:text-gray-400">
-                                    {log.location.coordinates[0].toFixed(4)}, {log.location.coordinates[1].toFixed(4)}
-                                  </div>
-                                </div>
-                              ) : log.location.name ? (
-                                log.location.name
-                              ) : (
-                                `${log.location.city || 'Unknown'}, ${log.location.country || 'Unknown'}`
-                              )
-                            ) : '-'}
+                          <div className="text-sm font-medium" style={{ color: '#2563eb' }}>
+                            {log.sessionTime ? `${Math.floor(log.sessionTime / 60)}m ${log.sessionTime % 60}s` : '-'}
                           </div>
                         </td>
                         <td>
-                          <span className={`risk-score ${log.riskScore > 70 ? 'high' : log.riskScore > 30 ? 'medium' : 'low'}`}>
+                          <div className="text-sm font-medium" style={{ color: (log.deleteKeyCount || 0) > 10 ? '#dc2626' : '#059669' }}>
+                            {log.deleteKeyCount || '-'}
+                          </div>
+                        </td>
+                        <td>
+                          <div className="text-sm font-medium" style={{ color: (log.failedAttempts || 0) > 0 ? '#dc2626' : '#6b7280' }}>
+                            {log.failedAttempts || '0'}
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`risk-score ${log.riskScore > 70 ? 'high' : log.riskScore > 40 ? 'medium' : 'low'}`}>
                             {log.riskScore}
                           </span>
                         </td>
                         <td>
-                          <span className={`status ${log.allowed ? 'active' : 'blocked'}`}>
-                            {log.allowed ? 'Allowed' : 'Blocked'}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="text-xs">
-                            {log.reason || '-'}
-                          </div>
-                        </td>
-                        <td>
                           <button
                             onClick={() => handleViewLog(log)}
-                            className="btn btn-primary btn-sm"
+                            className={`status ${log.allowed ? 'active' : 'blocked'}`}
+                            style={{ cursor: 'pointer', border: 'none', padding: '6px 12px' }}
                           >
-                            View
+                            {log.allowed ? 'ALLOWED' : 'BLOCKED'}
                           </button>
                         </td>
                       </tr>

@@ -251,6 +251,10 @@ router.get('/audit', authenticateToken, requireAdmin, async (req: AuthRequest, r
         const populatedUser = log.userId as any;
         const populatedFile = log.fileId as any;
         
+        // Calculate failed attempts from riskFactors
+        const failedAttempts = (log as any).riskFactors?.failedLoginAttempts || 
+                              (log as any).riskAssessment?.breakdown?.failedAttempts || 0;
+        
         return {
           id: log._id,
           userId: populatedUser ? { email: populatedUser.email } : null,
@@ -259,14 +263,16 @@ router.get('/audit', authenticateToken, requireAdmin, async (req: AuthRequest, r
           fileId: populatedFile ? { originalName: populatedFile.originalName } : null,
           action: log.action,
           riskScore: log.riskScore,
-          location: log.location,
           timestamp: log.timestamp,
           allowed: log.allowed,
-          reason: log.reason,
-          opaDecision: log.opaDecision,
-          zkpVerified: log.zkpVerified,
           userEmail: populatedUser ? populatedUser.email : log.userEmail,
-          riskAssessment: log.riskAssessment
+          // Session metrics for admin panel display
+          sessionTime: (log as any).sessionDuration || 0,
+          deleteKeyCount: (log as any).deleteKeyCount || 0,
+          failedAttempts: failedAttempts,
+          // Risk information
+          riskBreakdown: (log as any).riskAssessment?.breakdown,
+          riskFactors: (log as any).riskFactors
         };
       }),
       pagination: {

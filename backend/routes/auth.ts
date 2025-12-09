@@ -484,6 +484,7 @@ router.post('/login', checkDatabaseConnection, deviceAuthentication, logDeviceAc
           failedCount: failedEventsCount,
           gps: req.body.gps || null,
           keystrokeSample: req.body.keystroke || {},
+          timeOnPage: req.body.timeOnPage || 0,
           timestamp: req.body.localTimestamp || new Date().toISOString(),
           deviceId: req.body.deviceId || req.body.deviceFingerprint || null
         });
@@ -498,6 +499,7 @@ router.post('/login', checkDatabaseConnection, deviceAuthentication, logDeviceAc
         failedCount: failedEventsCount,
         gps: req.body.gps || null,
         keystrokeSample: req.body.keystroke || {},
+        timeOnPage: req.body.timeOnPage || 0,
         timestamp: req.body.localTimestamp || new Date().toISOString(),
         deviceId: req.body.deviceId || req.body.deviceFingerprint || null
       });
@@ -794,33 +796,50 @@ router.post('/login', checkDatabaseConnection, deviceAuthentication, logDeviceAc
     
     await user.save();
 
+    // Extract session metrics from request body
+    const timeOnPageSeconds = req.body.timeOnPage || 0;
+    const keystrokeData = req.body.keystroke || {};
+    const deleteKeyCount = keystrokeData.deleteCount || 0;
+    
+    console.log('[SESSION METRICS] Received from frontend:');
+    console.log('  timeOnPage:', timeOnPageSeconds);
+    console.log('  deleteCount:', deleteKeyCount);
+    
     // Log successful login with enhanced device info and risk breakdown
     await new AccessLog({
       userId: user._id,
       action: 'login',
-      riskScore: riskScore, // Use the RBA risk score, not totalRiskScore
-      location: location ? {
-        type: 'Point',
-        coordinates: location.coordinates,
-        name: location.name
-      } : undefined,
+      riskScore: riskScore,
       allowed: true,
-      zkpVerified: zkpVerified,
       userEmail: user.email,
       ipAddress: req.ip || 'unknown',
-      userAgent: req.headers['user-agent'] || 'unknown',
-      deviceFingerprint: deviceFingerprint || 'unknown',
+      // Session tracking - CRITICAL for risk calculation
+      sessionDuration: timeOnPageSeconds,
+      deleteKeyCount: deleteKeyCount,
+      // Risk factors - used for access decision
+      riskFactors: {
+        failedLoginAttempts: failedEventsCount || 0,
+        gpsDistanceKm: breakdown?.gpsDistance,
+        timeOnPageSeconds: timeOnPageSeconds,
+        unusualLocation: (breakdown?.gps || 0) > 0,
+        newDevice: (breakdown?.newDevice || 0) > 0,
+        suspiciousTyping: deleteKeyCount > 10
+      },
+      // Risk assessment breakdown
       riskAssessment: {
         breakdown: breakdown || {
           failedAttempts: 0,
           gps: 0,
           typing: 0,
-          timeOfDay: 0,
-          velocity: 0,
+          timeOnPage: 0,
           newDevice: 0
         }
       }
     }).save();
+    
+    console.log('[ACCESS LOG] ✅ Access log saved with session metrics');
+    console.log('[ACCESS LOG] Session Duration:', timeOnPageSeconds);
+    console.log('[ACCESS LOG] Delete Key Count:', deleteKeyCount);
 
     // Generate token
     const token = jwt.sign(
